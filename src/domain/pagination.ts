@@ -81,3 +81,9 @@ export const toPageSearch = (
   after: params.order !== 'popular' ? params.after : undefined,
   before: params.order !== 'popular' ? params.before : undefined,
 })
+
+// Search params for a keyset page of a list with a fixed order
+export const cursorSearch = (params: PageParams) => ({
+  after: 'after' in params ? params.after : undefined,
+  before: 'before' in params ? params.before : undefined,
+})

@@ -10,11 +10,32 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as LibraryRouteImport } from './routes/library'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetRouteImport } from './routes/reset'
+import { Route as StatsRouteImport } from './routes/stats'
+import { Route as AccountIndexRouteImport } from './routes/account/index'
+import { Route as AccountFavouritesRouteImport } from './routes/account/favourites'
+import { Route as AccountFragmentsRouteImport } from './routes/account/fragments'
+import { Route as AccountLinksRouteImport } from './routes/account/links'
+import { Route as SStoryRouteImport } from './routes/s.$story'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HealthRoute = HealthRouteImport.update({
@@ -22,31 +43,154 @@ const HealthRoute = HealthRouteImport.update({
   path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetRoute = ResetRouteImport.update({
+  id: '/reset',
+  path: '/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountIndexRoute = AccountIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountFavouritesRoute = AccountFavouritesRouteImport.update({
+  id: '/favourites',
+  path: '/favourites',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountFragmentsRoute = AccountFragmentsRouteImport.update({
+  id: '/fragments',
+  path: '/fragments',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountLinksRoute = AccountLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
+  getParentRoute: () => AccountRoute,
+} as any)
+const SStoryRoute = SStoryRouteImport.update({
+  id: '/s/$story',
+  path: '/s/$story',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRouteWithChildren
+  '/faq': typeof FaqRoute
   '/health': typeof HealthRoute
+  '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/reset': typeof ResetRoute
+  '/stats': typeof StatsRoute
+  '/account/favourites': typeof AccountFavouritesRoute
+  '/account/fragments': typeof AccountFragmentsRoute
+  '/account/links': typeof AccountLinksRoute
+  '/s/$story': typeof SStoryRoute
+  '/account/': typeof AccountIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/faq': typeof FaqRoute
   '/health': typeof HealthRoute
+  '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/reset': typeof ResetRoute
+  '/stats': typeof StatsRoute
+  '/account/favourites': typeof AccountFavouritesRoute
+  '/account/fragments': typeof AccountFragmentsRoute
+  '/account/links': typeof AccountLinksRoute
+  '/s/$story': typeof SStoryRoute
+  '/account': typeof AccountIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRouteWithChildren
+  '/faq': typeof FaqRoute
   '/health': typeof HealthRoute
+  '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
+  '/reset': typeof ResetRoute
+  '/stats': typeof StatsRoute
+  '/account/favourites': typeof AccountFavouritesRoute
+  '/account/fragments': typeof AccountFragmentsRoute
+  '/account/links': typeof AccountLinksRoute
+  '/s/$story': typeof SStoryRoute
+  '/account/': typeof AccountIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/health'
+  fullPaths:
+    | '/'
+    | '/account'
+    | '/faq'
+    | '/health'
+    | '/library'
+    | '/login'
+    | '/reset'
+    | '/stats'
+    | '/account/favourites'
+    | '/account/fragments'
+    | '/account/links'
+    | '/s/$story'
+    | '/account/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/health'
-  id: '__root__' | '/' | '/health'
+  to:
+    | '/'
+    | '/faq'
+    | '/health'
+    | '/library'
+    | '/login'
+    | '/reset'
+    | '/stats'
+    | '/account/favourites'
+    | '/account/fragments'
+    | '/account/links'
+    | '/s/$story'
+    | '/account'
+  id:
+    | '__root__'
+    | '/'
+    | '/account'
+    | '/faq'
+    | '/health'
+    | '/library'
+    | '/login'
+    | '/reset'
+    | '/stats'
+    | '/account/favourites'
+    | '/account/fragments'
+    | '/account/links'
+    | '/s/$story'
+    | '/account/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRouteWithChildren
+  FaqRoute: typeof FaqRoute
   HealthRoute: typeof HealthRoute
+  LibraryRoute: typeof LibraryRoute
+  LoginRoute: typeof LoginRoute
+  ResetRoute: typeof ResetRoute
+  StatsRoute: typeof StatsRoute
+  SStoryRoute: typeof SStoryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +202,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/health': {
       id: '/health'
       path: '/health'
@@ -65,12 +223,99 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset': {
+      id: '/reset'
+      path: '/reset'
+      fullPath: '/reset'
+      preLoaderRoute: typeof ResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/': {
+      id: '/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/favourites': {
+      id: '/account/favourites'
+      path: '/favourites'
+      fullPath: '/account/favourites'
+      preLoaderRoute: typeof AccountFavouritesRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/fragments': {
+      id: '/account/fragments'
+      path: '/fragments'
+      fullPath: '/account/fragments'
+      preLoaderRoute: typeof AccountFragmentsRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/links': {
+      id: '/account/links'
+      path: '/links'
+      fullPath: '/account/links'
+      preLoaderRoute: typeof AccountLinksRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/s/$story': {
+      id: '/s/$story'
+      path: '/s/$story'
+      fullPath: '/s/$story'
+      preLoaderRoute: typeof SStoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AccountRouteChildren {
+  AccountFavouritesRoute: typeof AccountFavouritesRoute
+  AccountFragmentsRoute: typeof AccountFragmentsRoute
+  AccountLinksRoute: typeof AccountLinksRoute
+  AccountIndexRoute: typeof AccountIndexRoute
+}
+
+const AccountRouteChildren: AccountRouteChildren = {
+  AccountFavouritesRoute: AccountFavouritesRoute,
+  AccountFragmentsRoute: AccountFragmentsRoute,
+  AccountLinksRoute: AccountLinksRoute,
+  AccountIndexRoute: AccountIndexRoute,
+}
+
+const AccountRouteWithChildren =
+  AccountRoute._addFileChildren(AccountRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRouteWithChildren,
+  FaqRoute: FaqRoute,
   HealthRoute: HealthRoute,
+  LibraryRoute: LibraryRoute,
+  LoginRoute: LoginRoute,
+  ResetRoute: ResetRoute,
+  StatsRoute: StatsRoute,
+  SStoryRoute: SStoryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

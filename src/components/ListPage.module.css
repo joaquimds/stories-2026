@@ -1,0 +1,6 @@
+/* Lists that scroll within the page */
+.list-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}

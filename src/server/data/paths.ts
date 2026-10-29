@@ -161,11 +161,9 @@ export const ensurePath = async (
       .insertInto('paths')
       .values({ parent_id: parentId, sentence_id: sentenceIds[i] as number })
       .onConflict((oc) =>
-        oc
-          .columns(['parent_id', 'sentence_id'])
-          .doUpdateSet((eb) => ({
-            sentence_id: eb.ref('excluded.sentence_id'),
-          })),
+        oc.columns(['parent_id', 'sentence_id']).doUpdateSet((eb) => ({
+          sentence_id: eb.ref('excluded.sentence_id'),
+        })),
       )
       .returning('id')
       .executeTakeFirstOrThrow()

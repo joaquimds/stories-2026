@@ -1,0 +1,71 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--spacing-0);
+}
+
+.sentence {
+  font-size: var(--font-size-3);
+  text-align: left;
+}
+
+.sentence-actions {
+  margin-top: var(--spacing-0);
+}
+
+.view {
+  color: var(--color-blue);
+  margin-right: var(--spacing-1);
+}
+
+.edit {
+  color: var(--color-red);
+  margin-right: var(--spacing-1);
+}
+
+.rewrite {
+  color: var(--color-green);
+}
+
+.editing {
+  textarea {
+    font-size: var(--font-size-2);
+    height: 5rem;
+    padding: var(--spacing-0);
+    width: 100%;
+  }
+}
+
+.edit-save {
+  color: var(--color-green);
+  margin-right: var(--spacing-0);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--spacing-1);
+}
+
+.actions {
+  margin-left: auto;
+}
+
+.delete {
+  color: var(--color-red);
+  margin-left: var(--spacing-1);
+}
+
+.save {
+  color: var(--color-blue);
+  margin-left: var(--spacing-1);
+}
+
+.like {
+  color: var(--color-green);
+}
+
+.reported {
+  color: var(--color-red);
+  margin-left: auto;
+}

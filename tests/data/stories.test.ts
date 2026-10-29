@@ -217,7 +217,14 @@ describe('getLinkCandidates', () => {
         from: leafOf(b1!),
         direction: 'parents',
       })
-      expect(ids(parentsOfB)).toEqual([leafOf(a!)])
+      // A's parent is the virtual root, so its siblings are all beginnings
+      expect(ids(parentsOfB)).toEqual([leafOf(a!), leafOf(z!)])
+
+      const beginnings = await getLinkCandidates(trx, {
+        from: leafOf(a!),
+        direction: 'siblings',
+      })
+      expect(ids(beginnings)).toEqual([leafOf(a!), leafOf(z!)])
 
       const ahead = await getLinkCandidates(trx, {
         from: leafOf(a!),

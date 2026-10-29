@@ -1,0 +1,23 @@
+.login {
+  display: flex;
+  flex-direction: column;
+
+  input[type='checkbox'] {
+    align-self: flex-start;
+    margin-top: var(--spacing-1);
+  }
+}
+
+.toggle {
+  color: var(--color-green);
+  margin-right: auto;
+}
+
+.forgot-password {
+  color: var(--color-red);
+  margin-right: auto;
+}
+
+.error {
+  margin-bottom: var(--spacing-0);
+}

@@ -1,0 +1,28 @@
+.navbar {
+  align-items: center;
+  border-bottom: 1px solid var(--color-grey-light);
+  display: flex;
+  padding: var(--spacing-1);
+}
+
+.logo {
+  align-items: center;
+  display: flex;
+
+  img {
+    margin-right: var(--spacing-0);
+    width: 64px;
+  }
+}
+
+.links {
+  margin-left: auto;
+
+  a {
+    margin-right: var(--spacing-2);
+  }
+
+  :last-child {
+    margin-right: 0;
+  }
+}

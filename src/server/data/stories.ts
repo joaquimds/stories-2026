@@ -4,6 +4,7 @@ import {
   type Page,
   type PageParams,
 } from '../../domain/pagination.ts'
+import type { LinkDirection } from '../../domain/search.ts'
 import type { Db } from '../db/index.ts'
 import {
   keysetPage,
@@ -283,9 +284,6 @@ const childSlugs = async (
   return new Map(rows.map((r) => [r.sentence_id, r.slug]))
 }
 
-export const LINK_DIRECTIONS = ['siblings', 'parents', 'children'] as const
-export type LinkDirection = (typeof LINK_DIRECTIONS)[number]
-
 export type LinkCandidate = {
   id: number
   content: string
@@ -302,13 +300,20 @@ export type LinkQuery = {
 }
 
 // Sentences that could be linked into a story: those matching a search, or
-// those near `from` in the graph (siblings, siblings of its parents or of
-// its children), oldest first.
+// those near `from` in the graph (its siblings, or the siblings of its
+// parents or of its children), oldest first.
 export const getLinkCandidates = async (
   db: Db,
   query: LinkQuery,
 ): Promise<Page<LinkCandidate>> => {
   const { from, direction, search } = query
+  // Parent-child edges, with a virtual root (0) as the parent of every
+  // beginning, so beginnings are each other's siblings
+  const edges = sql`
+    select from_sentence_id as parent, to_sentence_id as child from app.links
+    union all
+    select 0, id from app.sentences where written_under_path_id is null
+  `
   let matches: RawBuilder<{ id: number }>
   if (search) {
     matches = sql`
@@ -316,28 +321,29 @@ export const getLinkCandidates = async (
       where s.content ilike ${searchPattern(search)}
     `
   } else if (direction === 'parents') {
+    // Siblings of its parents
     matches = sql`
-      select l1.to_sentence_id as id from app.links l3
-      join app.links l2 on l2.to_sentence_id = l3.from_sentence_id
-      join app.links l1 on l1.from_sentence_id = l2.from_sentence_id
-      where l3.to_sentence_id = ${from}
-      union
-      select l3.from_sentence_id from app.links l3
-      join app.sentences s on s.id = l3.from_sentence_id
-      where l3.to_sentence_id = ${from} and s.written_under_path_id is null
+      with e as (${edges})
+      select sibling.child from e up
+      join e grand on grand.child = up.parent
+      join e sibling on sibling.parent = grand.parent
+      where up.child = ${from}
     `
   } else if (direction === 'children') {
+    // Siblings of its children
     matches = sql`
-      select l1.to_sentence_id as id from app.links l3
-      join app.links l2 on l2.to_sentence_id = l3.to_sentence_id
-      join app.links l1 on l1.from_sentence_id = l2.from_sentence_id
-      where l3.from_sentence_id = ${from}
+      with e as (${edges})
+      select sibling.child from e down
+      join e other on other.child = down.child
+      join e sibling on sibling.parent = other.parent
+      where down.parent = ${from}
     `
   } else {
     matches = sql`
-      select l1.to_sentence_id as id from app.links l2
-      join app.links l1 on l1.from_sentence_id = l2.from_sentence_id
-      where l2.to_sentence_id = ${from}
+      with e as (${edges})
+      select sibling.child from e up
+      join e sibling on sibling.parent = up.parent
+      where up.child = ${from}
     `
   }
   const params = {

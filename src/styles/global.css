@@ -1,0 +1,200 @@
+@import '@fontsource/eb-garamond/400.css';
+@import '@fontsource/eb-garamond/400-italic.css';
+@import '@fontsource/eb-garamond/700.css';
+@import '@fontsource/eb-garamond/700-italic.css';
+
+:root {
+  --color-black: #333333;
+  --color-white: #ffffff;
+  --color-grey-dark: #666666;
+  --color-grey-medium: #bfbfbf;
+  --color-grey-light: #ebebeb;
+  --color-grey-tint: #f5f5f5;
+  --color-red: #f00;
+  --color-green: #080;
+  --color-blue: #00f;
+
+  --font-size-0: 0.75rem;
+  --font-size-1: 1rem;
+  --font-size-2: 1.125rem;
+  --font-size-3: 1.25rem;
+  --font-size-4: 1.5rem;
+  --font-size-5: 2.25rem;
+  --font-size-6: 3rem;
+  --font-size-7: 3.75rem;
+
+  --spacing-0: 0.25rem;
+  --spacing-1: 0.5rem;
+  --spacing-2: 1rem;
+  --spacing-3: 2rem;
+  --spacing-4: 3rem;
+  --spacing-5: 4rem;
+  --spacing-6: 5rem;
+
+  --font-family: 'EB Garamond', serif;
+  --card-shadow: 0 0 var(--spacing-1) var(--color-grey-dark);
+  --max-width: 720px;
+}
+
+/* Reset */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+ul {
+  list-style: none;
+}
+
+/* Layout */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+
+  /* Pages that scroll as a whole rather than within their content */
+  &.scroll main {
+    min-height: auto;
+  }
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  margin: 0 auto;
+  max-width: var(--max-width);
+  padding: var(--spacing-2);
+  width: 100%;
+
+  @media (min-width: 600px) {
+    min-height: 0;
+  }
+}
+
+/* Typography */
+
+html {
+  color: var(--color-black);
+  font-family: var(--font-family);
+}
+
+h1 {
+  margin-bottom: var(--spacing-0);
+}
+
+a {
+  color: var(--color-black);
+  cursor: pointer;
+  text-decoration: none;
+
+  &:focus,
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* Buttons */
+
+button {
+  color: var(--color-black);
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: var(--font-size-1);
+
+  &:disabled {
+    color: var(--color-grey-dark);
+    cursor: auto;
+  }
+}
+
+.button {
+  background: var(--color-grey-tint);
+  border: 1px solid var(--color-grey-dark);
+  border-radius: 4px;
+  text-align: center;
+
+  &:hover,
+  &:focus {
+    text-decoration: none;
+
+    &:not(:disabled) {
+      background: var(--color-grey-light);
+    }
+  }
+
+  &:disabled {
+    border: 1px solid var(--color-grey-light);
+  }
+}
+
+.link {
+  background: none;
+  border: none;
+  font-size: var(--font-size-1);
+
+  &.current {
+    font-weight: bold;
+  }
+
+  &:hover,
+  &:focus {
+    &:not(:disabled) {
+      text-decoration: underline;
+    }
+  }
+}
+
+/* Forms */
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+input,
+.submit {
+  font-size: var(--font-size-1);
+  margin-bottom: var(--spacing-1);
+  padding: var(--spacing-0);
+}
+
+.error {
+  color: var(--color-red);
+  font-weight: bold;
+}
+
+/* Replaces nprogress */
+
+.pending-bar {
+  animation: pending 1.5s ease-out infinite;
+  background: #29d;
+  height: 2px;
+  left: 0;
+  position: fixed;
+  top: 0;
+  transform-origin: left;
+  width: 100%;
+  z-index: 1031;
+}
+
+@keyframes pending {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.9);
+  }
+}
+
+.visually-hidden {
+  clip: rect(0 0 0 0);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}

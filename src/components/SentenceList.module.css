@@ -1,0 +1,13 @@
+.info {
+  margin: 0 auto;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.sentence {
+  margin-bottom: var(--spacing-1);
+}

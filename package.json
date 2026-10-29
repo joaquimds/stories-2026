@@ -40,7 +40,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "start": "node server.js",
+    "start": "node --env-file-if-exists=.env server.js",
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.ts",
     "db:codegen": "kysely-codegen --default-schema app --include-pattern \"app.*\" --exclude-pattern \"app.kysely_*\" --type-mapping \"{\\\"int8\\\":\\\"number\\\"}\" --overrides \"{\\\"columns\\\":{\\\"contributions.user_id\\\":\\\"number\\\",\\\"contributions.path_id\\\":\\\"number\\\",\\\"contributions.kind\\\":\\\"'write' | 'like' | 'title'\\\",\\\"contributions.created_at\\\":\\\"Date\\\"}}\" --out-file src/server/db/types.ts",
     "db:seed": "node --env-file-if-exists=.env scripts/seed.ts",
