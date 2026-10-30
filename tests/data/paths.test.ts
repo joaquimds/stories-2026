@@ -16,9 +16,10 @@ describe('resolveStory', () => {
       const ana = await createUser(trx)
       const [a, b, c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
       const story = await resolveStory(trx, c as string)
-      expect(story?.sentenceIds).toEqual(
-        [a, b, c].map((t) => leafOf(t as string)),
-      )
+      expect(story?.sentenceIds).toEqual([
+        0,
+        ...[a, b, c].map((t) => leafOf(t as string)),
+      ])
       expect(story?.thread).toBe(c)
       // writing creates the origin paths of every sentence
       expect(story?.pathIds.every((id) => id !== null)).toBe(true)
@@ -41,9 +42,10 @@ describe('resolveStory', () => {
         sentenceId: leafOf(c!),
       })
       const story = await resolveStory(trx, again)
-      expect(story?.sentenceIds).toEqual(
-        [a, b, c, b, c].map((t) => leafOf(t as string)),
-      )
+      expect(story?.sentenceIds).toEqual([
+        0,
+        ...[a, b, c, b, c].map((t) => leafOf(t as string)),
+      ])
     }),
   )
 
@@ -79,7 +81,7 @@ describe('ensurePath', () => {
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [a, b, c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
-      const ids = [a, b, c].map((t) => leafOf(t!))
+      const ids = [0, ...[a, b, c].map((t) => leafOf(t!))]
       const { pathId } = await resolvePath(trx, ids)
       expect(await ensurePath(trx, ids)).toBe(pathId)
 

@@ -5,13 +5,13 @@ import {
   encodeThread,
   isThread,
   parseThread,
+  permalink,
 } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
 
-export type DefaultParents = Map<number, number | null>
+export { permalink }
 
-export const permalink = (thread: string, slug?: string | null) =>
-  `/s/${slug ?? thread}`
+export type DefaultParents = Map<number, number | null>
 
 export const loadDefaultParents = async (
   db: Db,

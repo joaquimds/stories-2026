@@ -37,13 +37,23 @@ export const up = async (db: Kysely<unknown>) => {
       primary key (key, window_start)
     );
 
+    -- Sentence 0 is the root: the parent of every beginning, and the home
+    -- page. It is the only sentence without an author or a parent path.
     create table app.sentences (
       id bigint generated always as identity primary key,
-      content text not null check (char_length(content) between 1 and 280),
-      author_id bigint not null references app.users,
+      content text not null,
+      author_id bigint references app.users,
       written_under_path_id bigint,
       deleted_at timestamptz,
-      created_at timestamptz not null default now()
+      created_at timestamptz not null default now(),
+      check (
+        case when id = 0
+          then content = '' and author_id is null
+            and written_under_path_id is null and deleted_at is null
+          else char_length(content) between 1 and 280
+            and author_id is not null and written_under_path_id is not null
+        end
+      )
     );
 
     create table app.paths (
@@ -63,7 +73,8 @@ export const up = async (db: Kysely<unknown>) => {
       to_sentence_id bigint not null references app.sentences on delete cascade,
       author_id bigint references app.users,
       created_at timestamptz not null default now(),
-      unique (from_sentence_id, to_sentence_id)
+      unique (from_sentence_id, to_sentence_id),
+      check (to_sentence_id <> 0)
     );
 
     create table app.likes (
@@ -98,13 +109,16 @@ export const up = async (db: Kysely<unknown>) => {
     create index on app.sentences using gin (content gin_trgm_ops);
     create index on app.titles using gin (title gin_trgm_ops);
 
+    insert into app.sentences (id, content) overriding system value values (0, '');
+    insert into app.paths (parent_id, sentence_id) values (null, 0);
+
     create view app.contributions as
       select s.author_id as user_id, p.id as path_id, 'write'::text as kind, s.created_at
       from app.sentences s
       join app.paths p
         on p.sentence_id = s.id
         and p.parent_id is not distinct from s.written_under_path_id
-      where s.deleted_at is null
+      where s.deleted_at is null and s.id <> 0
       union all
       select user_id, path_id, 'like', created_at from app.likes
       union all

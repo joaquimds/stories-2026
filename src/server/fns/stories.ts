@@ -31,23 +31,21 @@ const viewerOf = (user: { id: number; name: string }) => ({
 })
 
 export const getStoryPage = createServerFn({ method: 'GET' })
-  .validator(z.object({ story: story.nullable(), search: storySearchSchema }))
+  .validator(z.object({ story, search: storySearchSchema }))
   .handler(async ({ data }) => {
     const user = await currentUser()
     const viewer = user ? viewerOf(user) : null
     const database = db()
-    const resolved = data.story
-      ? await resolveStory(database, data.story)
-      : null
-    if (data.story && !resolved) {
+    const resolved = await resolveStory(database, data.story)
+    if (!resolved) {
       throw notFound()
     }
     const { search } = data
-    const leaf = resolved?.sentenceIds.at(-1)
+    const leaf = resolved.sentenceIds.at(-1) as number
     const [view, children, link] = await Promise.all([
-      resolved ? getStory(database, viewer, resolved) : null,
+      getStory(database, viewer, resolved),
       getChildren(database, resolved, toPageParams(search, 'popular')),
-      viewer && leaf && search.tab === 'link'
+      viewer && search.tab === 'link'
         ? getLinkCandidates(database, {
             from: search['l.from'] ?? leaf,
             direction: search['l.dir'] ?? 'siblings',
@@ -61,7 +59,7 @@ export const getStoryPage = createServerFn({ method: 'GET' })
   })
 
 export const write = createServerFn({ method: 'POST' })
-  .validator(z.object({ story: story.nullable(), content }))
+  .validator(z.object({ story, content }))
   .handler(({ data }) =>
     runUserAction((trx, viewer) =>
       writeSentence(trx, viewer, data.story, data.content),

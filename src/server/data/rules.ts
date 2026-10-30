@@ -84,7 +84,7 @@ export const digestEntries = async (
         join app.paths p
           on p.sentence_id = s.id
           and p.parent_id is not distinct from s.written_under_path_id
-        where s.deleted_at is null
+        where s.deleted_at is null and s.author_id is not null
           and s.created_at <= ${cutoff}
           and s.created_at > (
             select coalesce(min(last_notified_at), ${cutoff})

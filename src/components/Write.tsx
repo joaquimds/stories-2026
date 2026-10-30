@@ -9,7 +9,7 @@ import { Pager } from './Pager.tsx'
 import styles from './Write.module.css'
 
 type Props = {
-  story: Story | null
+  story: Story
   user: SessionUser | null
   search: StorySearch
   link: Page<LinkCandidate> | null
@@ -28,7 +28,8 @@ export const Write = ({ story, user, search, link }: Props) => {
   const [content, setContent] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const canLink = Boolean(user && story)
+  // On the home page, linking makes an existing sentence a new beginning
+  const canLink = Boolean(user)
   const linking = canLink && search.tab === 'link'
 
   const goTo = (thread: string) =>
@@ -40,7 +41,7 @@ export const Write = ({ story, user, search, link }: Props) => {
     setError(null)
     try {
       const result = await write({
-        data: { story: story?.thread ?? null, content },
+        data: { story: story.thread, content },
       })
       if (result.ok) {
         setContent('')
@@ -56,9 +57,6 @@ export const Write = ({ story, user, search, link }: Props) => {
   }
 
   const onLink = async (sentenceId: number) => {
-    if (!story) {
-      return
-    }
     setBusy(true)
     setError(null)
     try {

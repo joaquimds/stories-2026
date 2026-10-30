@@ -34,7 +34,7 @@ describe('parseThread', () => {
     })
   })
 
-  it.each(['', 'abc', '1.', '1.2', '1-2', '0', '1.0-2', '1.2-3.', '01x'])(
+  it.each(['', 'abc', '1.', '1.2', '1-2', '01', '1.02-3', '1.2-3.', '01x'])(
     'rejects %j',
     (value) => {
       expect(parseThread(value)).toBeNull()

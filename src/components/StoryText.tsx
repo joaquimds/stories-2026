@@ -10,6 +10,7 @@ import {
   title,
   unlink,
 } from '../server/fns/stories.ts'
+import { ROOT_THREAD } from '../domain/thread.ts'
 import styles from './StoryText.module.css'
 
 type Props = { story: Story; user: SessionUser | null }
@@ -63,10 +64,10 @@ export const StoryText = ({ story, user }: Props) => {
     }
   }
 
-  const goTo = (thread: string | null) =>
-    thread
-      ? navigate({ to: '/s/$story', params: { story: thread } })
-      : navigate({ to: '/' })
+  const goTo = (thread: string) =>
+    thread === ROOT_THREAD
+      ? navigate({ to: '/' })
+      : navigate({ to: '/s/$story', params: { story: thread } })
 
   const onSubmitEdit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,15 +99,16 @@ export const StoryText = ({ story, user }: Props) => {
     )
   }
 
-  const startEditing = (index: number, branch: boolean) =>
-    setEditing({ index, branch, content: lines[index]?.content ?? '' })
+  // `index` is the line's position in the whole story, root included
+  const startEditing = (line: StoryLine, branch: boolean) =>
+    setEditing({ index: line.index, branch, content: line.content })
 
   return (
     <>
       {story.title ? <h1>{story.title}</h1> : null}
       {lines.map((line, i) => (
         <div key={`${i}-${line.id}`} className={styles.content}>
-          {editing?.index === i ? (
+          {editing?.index === line.index ? (
             <form className={styles.editing} onSubmit={onSubmitEdit}>
               <textarea
                 aria-label="Sentence"
@@ -167,7 +169,7 @@ export const StoryText = ({ story, user }: Props) => {
                       className={`${styles.edit} link`}
                       type="button"
                       disabled={busy}
-                      onClick={() => startEditing(i, false)}
+                      onClick={() => startEditing(line, false)}
                     >
                       edit
                     </button>
@@ -177,7 +179,7 @@ export const StoryText = ({ story, user }: Props) => {
                       className={`${styles.rewrite} link`}
                       type="button"
                       disabled={busy}
-                      onClick={() => startEditing(i, true)}
+                      onClick={() => startEditing(line, true)}
                     >
                       write alternative branch
                     </button>

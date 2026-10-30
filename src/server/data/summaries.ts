@@ -1,3 +1,4 @@
+import { ROOT_ID } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
 import { loadDefaultParents, pathPermalinks } from './paths.ts'
 import { loadSentences } from './sentences.ts'
@@ -29,7 +30,7 @@ export const summarisePaths = async (
     const path = permalinks.get(pathId)
     const ids = path?.sentenceIds ?? []
     const live = (id: number | undefined) =>
-      id !== undefined && !sentences.get(id)?.deleted
+      id !== undefined && id !== ROOT_ID && !sentences.get(id)?.deleted
     const key: number[] = []
     const first = ids.find(live)
     if (first !== undefined) {

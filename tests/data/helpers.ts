@@ -1,4 +1,5 @@
 import { afterAll } from 'vitest'
+import { ROOT_THREAD } from '../../src/domain/thread.ts'
 import { type Db, createDb } from '../../src/server/db/index.ts'
 import type { Author } from '../../src/server/data/sentences.ts'
 import { writeSentence } from '../../src/server/data/sentences.ts'
@@ -47,7 +48,7 @@ export const writeChain = async (
   ...contents: string[]
 ) => {
   const threads: string[] = []
-  let current = story
+  let current = story ?? ROOT_THREAD
   for (const content of contents) {
     current = (await writeSentence(trx, author, current, content)).thread
     threads.push(current)

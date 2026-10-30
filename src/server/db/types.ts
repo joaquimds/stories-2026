@@ -60,7 +60,7 @@ export interface Reports {
 }
 
 export interface Sentences {
-  author_id: number;
+  author_id: number | null;
   content: string;
   created_at: Generated<Timestamp>;
   deleted_at: Timestamp | null;

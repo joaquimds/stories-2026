@@ -1,11 +1,17 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { StoryTree } from '../components/StoryTree.tsx'
 import { storySearchSchema } from '../domain/search.ts'
+import { ROOT_THREAD } from '../domain/thread.ts'
 import { SITE_DESCRIPTION, SITE_TITLE } from '../lib/site.ts'
 import { getStoryPage } from '../server/fns/stories.ts'
 
 export const Route = createFileRoute('/s/$story')({
   validateSearch: storySearchSchema,
+  beforeLoad: ({ params, search }) => {
+    if (params.story === ROOT_THREAD) {
+      throw redirect({ to: '/', search, statusCode: 301 })
+    }
+  },
   loaderDeps: ({ search }) => ({ search }),
   loader: ({ params, deps }) =>
     getStoryPage({ data: { story: params.story, search: deps.search } }),

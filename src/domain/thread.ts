@@ -15,7 +15,16 @@ export type ThreadGraph = {
   hasLink: (fromSentenceId: number, toSentenceId: number) => boolean
 }
 
-export const THREAD_PATTERN = /^\d+(\.\d+-\d+)*$/
+// The root sentence: the parent of every beginning. Its thread is the home page.
+export const ROOT_ID = 0
+export const ROOT_THREAD = '0'
+
+const ID = '(0|[1-9]\\d*)'
+export const THREAD_PATTERN = new RegExp(`^${ID}(\\.${ID}-${ID})*$`)
+
+// The URL of a story: its slug if titled, else its thread
+export const permalink = (thread: string, slug?: string | null) =>
+  thread === ROOT_THREAD && !slug ? '/' : `/s/${slug ?? thread}`
 
 // Guards against pathological threads; far beyond any real story
 export const MAX_THREAD_LENGTH = 10_000
@@ -24,7 +33,7 @@ export const isThread = (value: string) => THREAD_PATTERN.test(value)
 
 const toId = (value: string) => {
   const id = Number(value)
-  return Number.isSafeInteger(id) && id > 0 ? id : null
+  return Number.isSafeInteger(id) ? id : null
 }
 
 export const parseThread = (thread: string): ParsedThread | null => {
@@ -33,7 +42,7 @@ export const parseThread = (thread: string): ParsedThread | null => {
   }
   const [leafPart = '', ...stepParts] = thread.split('.')
   const leaf = toId(leafPart)
-  if (!leaf) {
+  if (leaf === null) {
     return null
   }
   const steps: Step[] = []
@@ -41,7 +50,7 @@ export const parseThread = (thread: string): ParsedThread | null => {
     const [fromPart = '', toPart = ''] = part.split('-')
     const from = toId(fromPart)
     const to = toId(toPart)
-    if (!from || !to) {
+    if (from === null || to === null) {
       return null
     }
     steps.push({ from, to })

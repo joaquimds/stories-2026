@@ -112,10 +112,15 @@ finish, and closes the pool.
 Where the plan left room, or where building it surfaced something:
 
 - **TypeScript 6.0**, not 7: typescript-eslint does not support 7 yet.
-- **Beginnings and the link browser**: the old sentinel sentence `0` was the
-  parent of every beginning. Its role is kept in two places: the home page
-  also lists the children of deleted beginnings (reached through them), and
-  the link browser treats beginnings as siblings of each other.
+- **The root sentence `0` is kept**, unlike the plan says. It is the parent
+  of every beginning (each beginning is written under its path and linked
+  from it), and the home page is its story, so the home page needs no
+  special case. Deleting a beginning that has continuations relinks them
+  from the root, the link browser treats beginnings as siblings, and an
+  existing sentence can be linked in as a new beginning. A check constraint
+  keeps the root contentless and authorless and stops anything linking to
+  it; the data layer leaves it out of story text, counts and searches, and
+  refuses to edit, like, title or report it. `/s/0` redirects to `/`.
 - **Rate limits** live in an extra `rate_limits` table (fixed windows).
   Login and password-reset attempts count even when they fail.
 - **Forgotten passwords** always report success, so the form doesn't reveal

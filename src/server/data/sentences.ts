@@ -1,5 +1,6 @@
 import { sql } from 'kysely'
 import { ActionError } from '../../domain/errors.ts'
+import { ROOT_ID } from '../../domain/thread.ts'
 import {
   PAGE_SIZE,
   type Page,
@@ -37,7 +38,7 @@ export const loadSentences = async (
   }
   const rows = await db
     .selectFrom('sentences as s')
-    .innerJoin('users as u', 'u.id', 's.author_id')
+    .leftJoin('users as u', 'u.id', 's.author_id')
     .select(['s.id', 's.content', 's.deleted_at', 's.author_id', 'u.name'])
     .where('s.id', 'in', ids)
     .execute()
@@ -48,7 +49,10 @@ export const loadSentences = async (
         id: r.id,
         content: r.deleted_at ? DELETED : r.content,
         deleted: Boolean(r.deleted_at),
-        author: r.deleted_at ? null : { id: r.author_id, name: r.name },
+        author:
+          r.deleted_at || r.author_id === null || r.name === null
+            ? null
+            : { id: r.author_id, name: r.name },
       },
     ]),
   )
@@ -81,9 +85,7 @@ const insertSentence = async (
   content: string,
   parentIds: number[],
 ) => {
-  const parentPathId = parentIds.length
-    ? await ensurePath(trx, parentIds)
-    : null
+  const parentPathId = await ensurePath(trx, parentIds)
   const { id } = await trx
     .insertInto('sentences')
     .values({
@@ -93,13 +95,14 @@ const insertSentence = async (
     })
     .returning('id')
     .executeTakeFirstOrThrow()
-  const parent = parentIds.at(-1)
-  if (parent !== undefined) {
-    await trx
-      .insertInto('links')
-      .values({ from_sentence_id: parent, to_sentence_id: id, author_id: null })
-      .execute()
-  }
+  await trx
+    .insertInto('links')
+    .values({
+      from_sentence_id: parentIds.at(-1) as number,
+      to_sentence_id: id,
+      author_id: null,
+    })
+    .execute()
   await trx
     .insertInto('paths')
     .values({ parent_id: parentPathId, sentence_id: id })
@@ -107,14 +110,14 @@ const insertSentence = async (
   return id
 }
 
-// Writes a sentence continuing `story`, or a new beginning when it is null
+// Writes a sentence continuing `story`; at the root, a new beginning
 export const writeSentence = async (
   trx: Db,
   viewer: Author,
-  story: string | null,
+  story: string,
   content: string,
 ) => {
-  const parentIds = story ? (await requireStory(trx, story)).sentenceIds : []
+  const { sentenceIds: parentIds } = await requireStory(trx, story)
   const id = await insertSentence(
     trx,
     viewer.id,
@@ -137,7 +140,7 @@ export const editSentence = async (
   const resolved = await requireStory(trx, input.story)
   const ids = resolved.sentenceIds
   const target = ids[input.index]
-  if (target === undefined) {
+  if (target === undefined || target === ROOT_ID) {
     throw new ActionError('invalid')
   }
   const sentence = await trx
@@ -228,11 +231,8 @@ export const deleteSentence = async (
   } else {
     await trx.deleteFrom('sentences').where('id', '=', target).execute()
   }
-  const parentIds = ids.slice(0, -1)
-  const [parentThread] = parentIds.length
-    ? await encodeThreads(trx, [parentIds])
-    : []
-  return { parentThread: parentThread ?? null, deleted: !child }
+  const [parentThread] = await encodeThreads(trx, [ids.slice(0, -1)])
+  return { parentThread: parentThread as string, deleted: !child }
 }
 
 export type FragmentItem = { id: number; content: string; permalink: string }

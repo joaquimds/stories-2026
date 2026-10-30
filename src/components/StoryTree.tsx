@@ -11,7 +11,7 @@ import { Write } from './Write.tsx'
 import styles from './StoryTree.module.css'
 
 type Props = {
-  story: Story | null
+  story: Story
   childPage: Page<ChildItem>
   childCount: number
   link: Page<LinkCandidate> | null
@@ -25,7 +25,7 @@ const CHILD_PAGE_RESET = {
   before: undefined,
 }
 
-// A story (or the beginnings) above, and the ways to continue it below; side
+// A story (on the home page, an invitation) above, and the ways to continue it below; side
 // by side on desktop
 export const StoryTree = ({
   story,
@@ -40,13 +40,13 @@ export const StoryTree = ({
     <div className={styles.container}>
       <div className={`${styles.half} ${styles.top}`}>
         <div className={`${styles.content} ${styles.page}`}>
-          {story ? (
-            <StoryText story={story} user={user} />
-          ) : (
+          {story.isRoot ? (
             <p className={styles.begin}>
               (choose a beginning, start a new story, or{' '}
               <Link to="/library">visit the library</Link>)
             </p>
+          ) : (
+            <StoryText story={story} user={user} />
           )}
         </div>
       </div>
@@ -73,7 +73,9 @@ export const StoryTree = ({
             </ul>
           ) : (
             <p className={styles.end}>
-              {story ? "(tale's end. write more or link to another)" : null}
+              {story.isRoot
+                ? null
+                : "(tale's end. write more or link to another)"}
             </p>
           )}
           <Pager

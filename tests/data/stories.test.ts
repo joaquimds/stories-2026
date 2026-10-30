@@ -13,8 +13,8 @@ import {
 import { createUser, leafOf, rollback, writeChain } from './helpers.ts'
 
 const children = async (trx: Db, thread: string | null, params: PageParams) => {
-  const story = thread ? await resolveStory(trx, thread) : null
-  return getChildren(trx, story, params)
+  const story = await resolveStory(trx, thread ?? '0')
+  return getChildren(trx, story!, params)
 }
 
 const contents = (page: { items: { content: string }[] }) =>
@@ -91,7 +91,7 @@ describe('getChildren', () => {
   )
 
   it(
-    'lists beginnings at the root, reaching past deleted beginnings',
+    'makes the children of a deleted beginning into beginnings',
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const bob = await createUser(trx)
@@ -104,7 +104,8 @@ describe('getChildren', () => {
       // Y was written before W
       expect(contents(root.page)).toEqual(['Y', 'W'])
       const yItem = root.page.items.find((i) => i.content === 'Y')
-      expect(yItem?.permalink).toBe(`/s/${y}`)
+      // Reached directly from the root, skipping X
+      expect(yItem?.permalink).toBe(`/s/${leafOf(y!)}.${leafOf(y!)}-0`)
     }),
   )
 

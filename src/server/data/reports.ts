@@ -12,6 +12,7 @@ export const reportSentence = async (
     .selectFrom('sentences')
     .select('id')
     .where('id', '=', sentenceId)
+    .where('author_id', 'is not', null)
     .where('deleted_at', 'is', null)
     .executeTakeFirst()
   if (!sentence) {

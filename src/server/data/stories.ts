@@ -5,6 +5,7 @@ import {
   type PageParams,
 } from '../../domain/pagination.ts'
 import type { LinkDirection } from '../../domain/search.ts'
+import { ROOT_ID } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
 import {
   keysetPage,
@@ -25,6 +26,8 @@ import { type SentenceRow, loadSentences } from './sentences.ts'
 export type Viewer = { id: number; name: string } | null
 
 export type StoryLine = SentenceRow & {
+  // Position in the story's sentence ids, which start with the root
+  index: number
   // Permalink of the story up to and including this sentence
   permalink: string
   editable: boolean
@@ -32,6 +35,8 @@ export type StoryLine = SentenceRow & {
 
 export type Story = {
   thread: string
+  // The home page: the root alone, which is never shown as a line
+  isRoot: boolean
   permalink: string
   title: string | null
   lines: StoryLine[]
@@ -74,25 +79,33 @@ export const getStory = async (
     : []
   const editable = await editableSentences(db, ownSentenceIds)
 
-  const lines = sentenceIds.map((id, i): StoryLine => {
+  const lines = sentenceIds.flatMap((id, i): StoryLine[] => {
+    if (id === ROOT_ID) {
+      return []
+    }
     const sentence = sentences.get(id) as SentenceRow
     const pathId = pathIds[i]
     const prefix = threadOf(sentenceIds.slice(0, i + 1), defaults)
-    return {
-      ...sentence,
-      permalink: permalink(
-        prefix,
-        pathId ? titleByPath.get(pathId)?.slug : undefined,
-      ),
-      editable: editable.has(id),
-    }
+    return [
+      {
+        ...sentence,
+        index: i,
+        permalink: permalink(
+          prefix,
+          pathId ? titleByPath.get(pathId)?.slug : undefined,
+        ),
+        editable: editable.has(id),
+      },
+    ]
   })
 
-  const leaf = lines.at(-1)
+  const isRoot = sentenceIds.at(-1) === ROOT_ID
+  const leaf = isRoot ? undefined : lines.at(-1)
   const title = leafPathId ? (titleByPath.get(leafPathId) ?? null) : null
 
   return {
     thread: resolved.thread,
+    isRoot,
     permalink: permalink(resolved.thread, title?.slug),
     title: title?.title ?? null,
     lines,
@@ -140,71 +153,50 @@ export type ChildItem = {
   permalink: string
 }
 
-type Candidate = { sentence_id: number; via: number }
+type Candidate = { sentence_id: number }
 
-// Children of a story, or the beginnings when `story` is null. Beginnings
-// include the children of deleted beginnings, reached through them.
-const candidatesSql = (story: ResolvedStory | null): RawBuilder<Candidate> => {
-  if (!story) {
-    return sql`
-      select s.id as sentence_id, 0::bigint as via,
-        null::bigint as parent_path, true as at_root
-      from app.sentences s
-      where s.written_under_path_id is null and s.deleted_at is null
-      union all
-      select c.id, x.id, xp.id, false
-      from app.sentences x
-      join app.links l on l.from_sentence_id = x.id
-      join app.sentences c on c.id = l.to_sentence_id and c.deleted_at is null
-      left join app.paths xp on xp.parent_id is null and xp.sentence_id = x.id
-      where x.written_under_path_id is null and x.deleted_at is not null
-    `
-  }
-  const leaf = story.sentenceIds.at(-1) as number
-  const leafPathId = story.pathIds.at(-1) ?? null
-  return sql`
-    select l.to_sentence_id as sentence_id, 0::bigint as via,
-      ${leafPathId}::bigint as parent_path, false as at_root
-    from app.links l
-    join app.sentences s on s.id = l.to_sentence_id
-    where l.from_sentence_id = ${leaf} and s.deleted_at is null
-  `
-}
+const candidatesSql = (story: ResolvedStory): RawBuilder<Candidate> => sql`
+  select l.to_sentence_id as sentence_id
+  from app.links l
+  join app.sentences s on s.id = l.to_sentence_id
+  where l.from_sentence_id = ${story.sentenceIds.at(-1) as number}
+    and s.deleted_at is null
+`
 
+// Sentences linked from the story's last sentence; at the root, the
+// beginnings
 export const getChildren = async (
   db: Db,
-  story: ResolvedStory | null,
+  story: ResolvedStory,
   params: PageParams,
 ): Promise<{ page: Page<ChildItem>; count: number }> => {
   const candidates = candidatesSql(story)
+  const leafPathId = story.pathIds.at(-1) ?? null
   let page: Page<Candidate>
   if (params.order === 'popular') {
     const { rows } = await sql<Candidate>`
       with recursive
         cand as (${candidates}),
-        sub(sentence_id, via, here, path_id) as (
-          select c.sentence_id, c.via,
-            coalesce(case when c.at_root then p.parent_id is null
-              else p.parent_id = c.parent_path end, false),
-            p.id
+        sub(sentence_id, here, path_id) as (
+          select c.sentence_id, coalesce(p.parent_id = ${leafPathId}::bigint, false), p.id
           from cand c join app.paths p on p.sentence_id = c.sentence_id
           union all
-          select sub.sentence_id, sub.via, sub.here, p.id
+          select sub.sentence_id, sub.here, p.id
           from sub join app.paths p on p.parent_id = sub.path_id
         ),
         scores as (
-          select sub.sentence_id, sub.via,
+          select sub.sentence_id,
             count(distinct c.user_id) filter (where sub.here) as here_score,
             count(distinct c.user_id) as score
           from sub
           join app.contributions c on c.path_id = sub.path_id
           where c.kind in ('write', 'like')
-          group by sub.sentence_id, sub.via
+          group by sub.sentence_id
         )
-      select cand.sentence_id, cand.via
-      from cand left join scores using (sentence_id, via)
+      select cand.sentence_id
+      from cand left join scores using (sentence_id)
       order by coalesce(here_score, 0) desc, coalesce(score, 0) desc,
-        cand.sentence_id, cand.via
+        cand.sentence_id
       limit ${PAGE_SIZE + 1} offset ${popularOffset(params.page)}
     `.execute(db)
     page = popularPage(rows, params.page ?? 1)
@@ -212,9 +204,9 @@ export const getChildren = async (
     const { cursor, op, direction } = keysetQuery(params)
     const { rows } = await sql<Candidate>`
       with cand as (${candidates})
-      select sentence_id, via from cand
+      select sentence_id from cand
       ${cursor ? sql`where sentence_id ${sql.raw(op)} ${cursor}` : sql``}
-      order by sentence_id ${sql.raw(direction)}, via
+      order by sentence_id ${sql.raw(direction)}
       limit ${PAGE_SIZE + 1}
     `.execute(db)
     page = keysetPage(rows, params, (c) => c.sentence_id)
@@ -223,63 +215,45 @@ export const getChildren = async (
     with cand as (${candidates}) select count(*)::int as count from cand
   `.execute(db)
 
-  const sequences = page.items.map((c) => {
-    if (!story) {
-      return c.via ? [c.via, c.sentence_id] : [c.sentence_id]
-    }
-    return [...story.sentenceIds, c.sentence_id]
-  })
+  const childIds = page.items.map((c) => c.sentence_id)
+  const sequences = childIds.map((id) => [...story.sentenceIds, id])
   const [sentences, defaults, slugs] = await Promise.all([
-    loadSentences(
-      db,
-      page.items.map((c) => c.sentence_id),
-    ),
+    loadSentences(db, childIds),
     loadDefaultParents(db, sequences.flat()),
-    childSlugs(db, story, page.items),
+    childSlugs(db, leafPathId, childIds),
   ])
   return {
     count: countRows[0]?.count ?? 0,
     page: {
       ...page,
-      items: page.items.map((c, i) => {
-        const thread = threadOf(sequences[i] as number[], defaults)
-        return {
-          key: `${c.via}-${c.sentence_id}`,
-          sentenceId: c.sentence_id,
-          content: sentences.get(c.sentence_id)?.content ?? '',
-          permalink: permalink(
-            thread,
-            c.via ? undefined : slugs.get(c.sentence_id),
-          ),
-        }
-      }),
+      items: childIds.map((id, i) => ({
+        key: String(id),
+        sentenceId: id,
+        content: sentences.get(id)?.content ?? '',
+        permalink: permalink(
+          threadOf(sequences[i] as number[], defaults),
+          slugs.get(id),
+        ),
+      })),
     },
   }
 }
 
+// Slugs of the children's paths that are titled
 const childSlugs = async (
   db: Db,
-  story: ResolvedStory | null,
-  items: Candidate[],
+  parentPathId: number | null,
+  childIds: number[],
 ) => {
-  const parentPathId = story ? (story.pathIds.at(-1) ?? null) : null
-  if (!items.length || (story && !parentPathId)) {
+  if (!parentPathId || !childIds.length) {
     return new Map<number, string>()
   }
   const rows = await db
     .selectFrom('paths as p')
     .innerJoin('titles as t', 't.path_id', 'p.id')
     .select(['p.sentence_id', 't.slug'])
-    .where(
-      'p.sentence_id',
-      'in',
-      items.map((c) => c.sentence_id),
-    )
-    .where((eb) =>
-      parentPathId
-        ? eb('p.parent_id', '=', parentPathId)
-        : eb('p.parent_id', 'is', null),
-    )
+    .where('p.sentence_id', 'in', childIds)
+    .where('p.parent_id', '=', parentPathId)
     .execute()
   return new Map(rows.map((r) => [r.sentence_id, r.slug]))
 }
@@ -307,13 +281,6 @@ export const getLinkCandidates = async (
   query: LinkQuery,
 ): Promise<Page<LinkCandidate>> => {
   const { from, direction, search } = query
-  // Parent-child edges, with a virtual root (0) as the parent of every
-  // beginning, so beginnings are each other's siblings
-  const edges = sql`
-    select from_sentence_id as parent, to_sentence_id as child from app.links
-    union all
-    select 0, id from app.sentences where written_under_path_id is null
-  `
   let matches: RawBuilder<{ id: number }>
   if (search) {
     matches = sql`
@@ -323,27 +290,24 @@ export const getLinkCandidates = async (
   } else if (direction === 'parents') {
     // Siblings of its parents
     matches = sql`
-      with e as (${edges})
-      select sibling.child from e up
-      join e grand on grand.child = up.parent
-      join e sibling on sibling.parent = grand.parent
-      where up.child = ${from}
+      select sibling.to_sentence_id from app.links up
+      join app.links grand on grand.to_sentence_id = up.from_sentence_id
+      join app.links sibling on sibling.from_sentence_id = grand.from_sentence_id
+      where up.to_sentence_id = ${from}
     `
   } else if (direction === 'children') {
     // Siblings of its children
     matches = sql`
-      with e as (${edges})
-      select sibling.child from e down
-      join e other on other.child = down.child
-      join e sibling on sibling.parent = other.parent
-      where down.parent = ${from}
+      select sibling.to_sentence_id from app.links down
+      join app.links other on other.to_sentence_id = down.to_sentence_id
+      join app.links sibling on sibling.from_sentence_id = other.from_sentence_id
+      where down.from_sentence_id = ${from}
     `
   } else {
     matches = sql`
-      with e as (${edges})
-      select sibling.child from e up
-      join e sibling on sibling.parent = up.parent
-      where up.child = ${from}
+      select sibling.to_sentence_id from app.links up
+      join app.links sibling on sibling.from_sentence_id = up.from_sentence_id
+      where up.to_sentence_id = ${from}
     `
   }
   const params = {
@@ -354,7 +318,11 @@ export const getLinkCandidates = async (
   const { cursor, op, direction: sort } = keysetQuery(params)
   const { rows } = await sql<LinkCandidate>`
     select s.id, s.content,
-      exists (select 1 from app.links l where l.to_sentence_id = s.id) as "hasParent",
+      -- Tracing back finds nothing when the only parent is the root
+      exists (
+        select 1 from app.links l
+        where l.to_sentence_id = s.id and l.from_sentence_id <> ${ROOT_ID}
+      ) as "hasParent",
       exists (
         select 1 from app.links l
         join app.sentences c on c.id = l.to_sentence_id and c.deleted_at is null
@@ -362,6 +330,7 @@ export const getLinkCandidates = async (
       ) as "hasChild"
     from app.sentences s
     where s.id in (${matches})
+      and s.id <> ${ROOT_ID}
       and s.deleted_at is null
       ${cursor ? sql`and s.id ${sql.raw(op)} ${cursor}` : sql``}
     order by s.id ${sql.raw(sort)}

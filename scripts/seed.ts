@@ -1,5 +1,6 @@
 // Seeds a small graph of stories. With --reset, drops the app schema first.
 import { sql } from 'kysely'
+import { ROOT_THREAD } from '../src/domain/thread.ts'
 import { hashPassword } from '../src/server/auth/passwords.ts'
 import { createDb } from '../src/server/db/index.ts'
 import { migrate } from '../src/server/db/migrate.ts'
@@ -47,13 +48,14 @@ const [ana, bob, cat] = users as [
 ]
 
 await db.transaction().execute(async (trx) => {
-  const write = async (
-    author: typeof ana,
-    story: string | null,
-    content: string,
-  ) => (await writeSentence(trx, author, story, content)).thread
+  const write = async (author: typeof ana, story: string, content: string) =>
+    (await writeSentence(trx, author, story, content)).thread
 
-  const garden = await write(ana, null, 'In the garden, the paths forked.')
+  const garden = await write(
+    ana,
+    ROOT_THREAD,
+    'In the garden, the paths forked.',
+  )
   const left = await write(
     bob,
     garden,
@@ -88,7 +90,7 @@ await db.transaction().execute(async (trx) => {
 
   const letter = await write(
     bob,
-    null,
+    ROOT_THREAD,
     'The letter arrived a hundred years late.',
   )
   const opened = await write(
@@ -104,7 +106,7 @@ await db.transaction().execute(async (trx) => {
 
   await write(
     cat,
-    null,
+    ROOT_THREAD,
     'Every night, the lighthouse blinked a different message.',
   )
 

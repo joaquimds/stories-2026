@@ -4,6 +4,8 @@ import {
   type Page,
   type PageParams,
 } from '../../domain/pagination.ts'
+import { ActionError } from '../../domain/errors.ts'
+import { ROOT_ID } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
 import { keysetPage, keysetQuery, searchPattern } from './paging.ts'
 import { ensurePath, resolvePath } from './paths.ts'
@@ -16,6 +18,9 @@ export const setLike = async (
   input: { story: string; liked: boolean },
 ) => {
   const { sentenceIds } = await requireStory(trx, input.story)
+  if (sentenceIds.at(-1) === ROOT_ID) {
+    throw new ActionError('invalid')
+  }
   if (input.liked) {
     const pathId = await ensurePath(trx, sentenceIds)
     await trx

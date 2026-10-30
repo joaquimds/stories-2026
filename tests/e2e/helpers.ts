@@ -48,6 +48,9 @@ export const writeSentence = async (page: Page, content: string) => {
   await page.getByRole('button', { name: 'Submit' }).click()
   await expect(page.getByText(content, { exact: true }).first()).toBeVisible()
   await expect(page).toHaveURL(/\/s\/\d+/)
+  // Let the navigation settle before typing anything else
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByRole('textbox', { name: 'Write' })).toHaveValue('')
 }
 
 export const storyText = (page: Page) => page.locator('main div').first()

@@ -2,6 +2,7 @@ import { sql } from 'kysely'
 import { ActionError } from '../../domain/errors.ts'
 import type { Page, PageParams } from '../../domain/pagination.ts'
 import { PAGE_SIZE } from '../../domain/pagination.ts'
+import { ROOT_ID } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
 import { keysetPage, keysetQuery, searchPattern } from './paging.ts'
 import {
@@ -27,7 +28,7 @@ export const linkSentence = async (
     .select('deleted_at')
     .where('id', '=', input.sentenceId)
     .executeTakeFirst()
-  if (!child || child.deleted_at) {
+  if (!child || child.deleted_at || input.sentenceId === ROOT_ID) {
     throw new ActionError('notFound')
   }
   const inserted = await trx
@@ -91,6 +92,9 @@ export const unlinkSentence = async (
   return { parentThread: parentThread as string }
 }
 
+// Shown in place of the root's empty content
+const BEGINNING = '(begin)'
+
 export type LinkItem = {
   id: number
   fromContent: string
@@ -120,6 +124,7 @@ export const myLinks = async (
     .select([
       'l.id',
       'l.to_sentence_id',
+      'f.id as from_id',
       'origin.id as origin_path_id',
       'f.content as from_content',
       'f.deleted_at as from_deleted_at',
@@ -159,7 +164,10 @@ export const myLinks = async (
     ...page,
     items: page.items.map((r, i) => ({
       id: r.id,
-      fromContent: maskContent(r.from_content, r.from_deleted_at),
+      fromContent:
+        r.from_id === ROOT_ID
+          ? BEGINNING
+          : maskContent(r.from_content, r.from_deleted_at),
       toContent: maskContent(r.to_content, r.to_deleted_at),
       permalink: permalink(threads[i] as string),
     })),

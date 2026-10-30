@@ -85,3 +85,8 @@ test('shows stats', async ({ page }) => {
   )
   await expect(page.getByText('Loops in the tree')).toBeVisible()
 })
+
+test('redirects the root thread to the home page', async ({ page }) => {
+  await page.goto('/s/0')
+  await expect(page).toHaveURL('/')
+})

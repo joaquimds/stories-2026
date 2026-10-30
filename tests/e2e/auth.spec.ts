@@ -48,6 +48,9 @@ test('resets a forgotten password', async ({ page }) => {
   await plantResetToken('cat@example.com', 'e2e-reset-token-2')
   await page.goto('/account')
   await page.getByRole('button', { name: 'Log Out' }).click()
+  await expect(
+    page.getByRole('link', { name: 'Login', exact: true }),
+  ).toBeVisible()
   await page.goto('/reset#e2e-reset-token-2')
   await page.getByLabel('Password', { exact: true }).fill('password')
   await page.getByLabel('Confirm password').fill('password')

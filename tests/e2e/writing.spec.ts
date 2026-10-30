@@ -174,3 +174,20 @@ test('lists fragments on the account page', async ({ page }) => {
   await page.getByLabel('Search').fill('bridge')
   await expect(main(page).locator('li')).toHaveCount(1)
 })
+
+test('links an existing sentence as a new beginning', async ({ page }) => {
+  const target = 'Except the youngest, who had never learned to read.'
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Link', exact: true }).click()
+  await page.getByRole('searchbox', { name: 'Search' }).fill('youngest')
+  await page.getByRole('button', { name: `→ ${target}` }).click()
+  await expect(page).toHaveURL(/\/s\/\d+\.\d+-0$/)
+
+  await page.goto('/?order=newest')
+  await expect(page.locator('main ul li').getByText(target)).toBeVisible()
+
+  await page.locator('main ul li').getByText(target).click()
+  await page.getByRole('button', { name: 'unlink' }).click()
+  await expect(page).toHaveURL('/')
+  await expect(page.locator('main ul li').getByText(target)).toHaveCount(0)
+})

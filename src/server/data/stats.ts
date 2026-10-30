@@ -38,23 +38,26 @@ export const computeStats = async (db: Db): Promise<Stats> => {
     last_month: number
   }>`
     select
-      (select count(*) from app.sentences where deleted_at is null)::int as sentences,
+      (select count(*) from app.sentences where deleted_at is null and author_id is not null)::int as sentences,
       (select count(distinct author_id) from app.sentences where deleted_at is null)::int as writers,
       (select count(*) from app.likes)::int as likes,
       (select count(*) from app.titles)::int as titled_stories,
       (select count(*) from app.sentences
-        where deleted_at is null and created_at > now() - interval '7 days')::int as last_week,
+        where deleted_at is null and author_id is not null
+          and created_at > now() - interval '7 days')::int as last_week,
       (select count(*) from app.sentences
-        where deleted_at is null and created_at > now() - interval '30 days')::int as last_month
+        where deleted_at is null and author_id is not null
+          and created_at > now() - interval '30 days')::int as last_month
   `.execute(db)
 
   const { rows: deepest } = await sql<{ id: number; depth: number }>`
     with recursive tree(id, depth) as (
-      select id, 1 from app.paths where parent_id is null
+      -- The root's path has depth 0, so depth counts sentences
+      select id, 0 from app.paths where parent_id is null
       union all
       select p.id, tree.depth + 1 from tree join app.paths p on p.parent_id = tree.id
     )
-    select id, depth from tree order by depth desc, id limit 1
+    select id, depth from tree where depth > 0 order by depth desc, id limit 1
   `.execute(db)
 
   const { rows: branched } = await sql<{
@@ -70,7 +73,7 @@ export const computeStats = async (db: Db): Promise<Stats> => {
     join app.paths origin
       on origin.sentence_id = s.id
       and origin.parent_id is not distinct from s.written_under_path_id
-    where s.deleted_at is null
+    where s.deleted_at is null and s.author_id is not null
     group by s.id, origin.id
     order by children desc, s.id
     limit 1
