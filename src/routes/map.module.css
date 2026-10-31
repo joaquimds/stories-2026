@@ -12,9 +12,3 @@
   gap: var(--spacing-2);
   justify-content: space-between;
 }
-
-.legend {
-  color: var(--color-grey-dark);
-  font-size: var(--font-size-0);
-  margin-bottom: var(--spacing-1);
-}

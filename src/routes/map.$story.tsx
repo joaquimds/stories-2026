@@ -25,10 +25,6 @@ function MapPage() {
         <h1>{title ? `Map of ${title}` : 'Map'}</h1>
         <Link to={permalink}>(back to the story)</Link>
       </div>
-      <p className={styles.legend}>
-        Dark: this story, with ◯ where you are. ↺ loops back. +N: more beyond.
-        Drag to move, scroll to zoom.
-      </p>
       <StoryMap nodes={nodes} />
     </div>
   )

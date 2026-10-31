@@ -1,18 +1,28 @@
-// Positions for a tree drawn left to right: each leaf gets its own row,
-// each parent sits midway between its first and last child, and depth
-// sets the column.
+// Positions for a tree drawn outward from a central point, like a circular
+// maze: depth sets the ring, each leaf gets an equal share of the circle,
+// and each parent sits midway between the angles of its first and last
+// child.
 
 export type TreeNode = { key: string; parent: string | null }
 
-export type Layout = {
-  positions: Map<string, { x: number; y: number }>
-  width: number
-  height: number
+export type Placement = {
+  x: number
+  y: number
+  // Radians, clockwise from pointing right
+  angle: number
+  depth: number
+  radius: number
 }
 
-export const layoutTree = (
+export type Layout = {
+  positions: Map<string, Placement>
+  // The outermost ring
+  radius: number
+}
+
+export const radialLayout = (
   nodes: TreeNode[],
-  { column, row }: { column: number; row: number },
+  { ring }: { ring: number },
 ): Layout => {
   const children = new Map<string, string[]>()
   let root: string | undefined
@@ -26,41 +36,57 @@ export const layoutTree = (
       ])
     }
   }
-  const positions = new Map<string, { x: number; y: number }>()
+  const positions = new Map<string, Placement>()
   if (root === undefined) {
-    return { positions, width: 0, height: 0 }
+    return { positions, radius: 0 }
   }
-  let rows = 0
-  let depthMax = 0
-  // Iterative post-order, so deep trees can't overflow the stack
-  const stack: { key: string; depth: number; visited: boolean }[] = [
-    { key: root, depth: 0, visited: false },
-  ]
+
+  // First pass: depths and leaf order, iteratively so deep trees can't
+  // overflow the stack
+  const depth = new Map<string, number>()
+  const leaves: string[] = []
+  const order: string[] = []
+  const stack = [root]
+  depth.set(root, 0)
   while (stack.length) {
-    const entry = stack.pop() as (typeof stack)[number]
-    const kids = children.get(entry.key) ?? []
-    depthMax = Math.max(depthMax, entry.depth)
+    const key = stack.pop() as string
+    order.push(key)
+    const kids = children.get(key) ?? []
     if (!kids.length) {
-      positions.set(entry.key, { x: entry.depth * column, y: rows++ * row })
-      continue
+      leaves.push(key)
     }
-    if (!entry.visited) {
-      stack.push({ ...entry, visited: true })
-      for (const kid of [...kids].reverse()) {
-        stack.push({ key: kid, depth: entry.depth + 1, visited: false })
-      }
-      continue
+    for (const kid of [...kids].reverse()) {
+      depth.set(kid, (depth.get(key) ?? 0) + 1)
+      stack.push(kid)
     }
-    const first = positions.get(kids[0] as string)!
-    const last = positions.get(kids.at(-1) as string)!
-    positions.set(entry.key, {
-      x: entry.depth * column,
-      y: (first.y + last.y) / 2,
+  }
+
+  // Leaves share the circle; parents take the middle of their children,
+  // working back from the deepest nodes
+  const angle = new Map<string, number>()
+  leaves.forEach((key, i) => angle.set(key, (2 * Math.PI * i) / leaves.length))
+  for (const key of [...order].reverse()) {
+    const kids = children.get(key)
+    if (kids?.length) {
+      const first = angle.get(kids[0] as string) as number
+      const last = angle.get(kids.at(-1) as string) as number
+      angle.set(key, (first + last) / 2)
+    }
+  }
+
+  let outer = 0
+  for (const key of order) {
+    const d = depth.get(key) as number
+    const a = angle.get(key) as number
+    const radius = d * ring
+    outer = Math.max(outer, radius)
+    positions.set(key, {
+      x: radius * Math.cos(a),
+      y: radius * Math.sin(a),
+      angle: a,
+      depth: d,
+      radius,
     })
   }
-  return {
-    positions,
-    width: depthMax * column,
-    height: Math.max(0, rows - 1) * row,
-  }
+  return { positions, radius: outer }
 }

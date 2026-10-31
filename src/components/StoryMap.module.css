@@ -32,22 +32,35 @@
   }
 }
 
+.hedge {
+  fill: none;
+  stroke: var(--color-grey-light);
+  stroke-linecap: round;
+  stroke-width: 10;
+  vector-effect: non-scaling-stroke;
+}
+
 .edge {
   fill: none;
   stroke: var(--color-grey-medium);
-  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
 
 .edge-story {
   fill: none;
   stroke: var(--color-black);
-  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
 }
 
 .dot {
   fill: var(--color-white);
   stroke: var(--color-grey-dark);
   stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
 }
 
 .dot-story {
@@ -58,6 +71,11 @@
   fill: none;
   stroke: var(--color-black);
   stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.target {
+  fill: transparent;
 }
 
 .label {

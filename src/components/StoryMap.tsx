@@ -1,23 +1,23 @@
 import { Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { layoutTree } from '../domain/map-layout.ts'
+import { type Placement, radialLayout } from '../domain/map-layout.ts'
 import type { MapNode } from '../server/data/map.ts'
 import styles from './StoryMap.module.css'
 
-const COLUMN = 230
-const ROW = 34
-const LABEL_LENGTH = 28
-// Starts a little zoomed out, to show more of the tree while staying legible
-const START_SCALE = 0.85
+// Distance between rings; labels end before the next ring's lane
+const RING = 180
+// Paths run along a lane just inside each ring, like a maze
+const LANE = 20
+const LABEL_LENGTH = 22
+// Labels appear once zoomed in far enough to read them
+const LABEL_SCALE = 0.6
 // Until the map is measured in the browser
 const DEFAULT_SIZE = { width: 700, height: 500 }
-// The reader's position starts a little left of centre, to show what's ahead
-const LEAD = 60
 
 // The map point at the centre of the view, and screen pixels per map unit
 type Camera = { x: number; y: number; scale: number }
 
-const clampScale = (scale: number) => Math.min(Math.max(scale, 0.25), 3)
+const clampScale = (scale: number) => Math.min(Math.max(scale, 0.1), 3)
 
 // Zooms by `factor`, keeping the map point at `focus` where it is
 const zoomed = (
@@ -48,6 +48,51 @@ const pointAt = (
   }
 }
 
+const point = (radius: number, angle: number) =>
+  `${radius * Math.cos(angle)} ${radius * Math.sin(angle)}`
+
+// Out from the parent, along the lane inside the child's ring, then out to
+// the child
+const mazePath = (from: Placement, to: Placement) => {
+  const lane = to.radius - LANE
+  if (from.radius === 0) {
+    return `M0 0 L${point(lane, to.angle)} L${to.x} ${to.y}`
+  }
+  const turn = to.angle - from.angle
+  const arc =
+    Math.abs(turn) < 1e-9
+      ? ''
+      : `A${lane} ${lane} 0 ${Math.abs(turn) > Math.PI ? 1 : 0} ${turn > 0 ? 1 : 0} ${point(lane, to.angle)}`
+  return `M${from.x} ${from.y} L${point(lane, from.angle)} ${arc} L${to.x} ${to.y}`
+}
+
+// Half the width of a doorway in a hedge, in screen pixels, allowing for
+// the hedge's rounded ends
+const DOORWAY = 16
+
+// A ring of hedge with gaps at the given angles, each `half` map units
+// either side
+const hedgePath = (radius: number, gaps: number[], halfWidth: number) => {
+  if (!gaps.length) {
+    return `M${point(radius, 0)} A${radius} ${radius} 0 1 1 ${point(radius, Math.PI)} A${radius} ${radius} 0 1 1 ${point(radius, 0)}`
+  }
+  const half = halfWidth / radius
+  const sorted = [...new Set(gaps)].sort((a, b) => a - b)
+  return sorted
+    .map((gap, i) => {
+      // From the end of this doorway to the start of the next, round the
+      // circle back to the first
+      const next = (sorted[i + 1] ?? (sorted[0] as number) + 2 * Math.PI) - half
+      const start = gap + half
+      if (next <= start) {
+        return ''
+      }
+      const large = next - start > Math.PI ? 1 : 0
+      return `M${point(radius, start)} A${radius} ${radius} 0 ${large} 1 ${point(radius, next)}`
+    })
+    .join(' ')
+}
+
 const label = (node: MapNode) => {
   if (node.sentenceId === 0) {
     return 'Beginnings'
@@ -59,24 +104,45 @@ const label = (node: MapNode) => {
   return node.loop ? `↺ ${text}` : text
 }
 
-// The branches around a story at reading size, panned by dragging and
-// zoomed with the wheel or the buttons
+// The branches around a story as a circular maze, spreading out from its
+// first sentence; panned by dragging and zoomed with the wheel or buttons
 export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
-  const { positions } = useMemo(
-    () => layoutTree(nodes, { column: COLUMN, row: ROW }),
+  const { positions, radius } = useMemo(
+    () => radialLayout(nodes, { ring: RING }),
     [nodes],
   )
   const byKey = useMemo(() => new Map(nodes.map((n) => [n.key, n])), [nodes])
+  const depth = useMemo(
+    () => Math.max(0, ...[...positions.values()].map((p) => p.depth)),
+    [positions],
+  )
 
+  // Hedges between the rings, with a doorway wherever a path passes
+  // through, and an unbroken wall outside
+  const hedges = useMemo(() => {
+    const doorways = new Map<number, number[]>()
+    for (const node of nodes) {
+      const at = positions.get(node.key)
+      const from = node.parent ? positions.get(node.parent) : undefined
+      if (at && from) {
+        // Paths cross the hedge beyond their parent along the parent's
+        // angle, or the child's when leaving the centre
+        const angle = from.radius === 0 ? at.angle : from.angle
+        doorways.set(from.depth, [...(doorways.get(from.depth) ?? []), angle])
+      }
+    }
+    return Array.from({ length: depth + 1 }, (_, d) => ({
+      radius: (d + 0.5) * RING,
+      gaps: doorways.get(d) ?? [],
+    }))
+  }, [nodes, positions, depth])
+
+  // The whole maze, centred on its middle
   const initial = useMemo((): Camera => {
-    const current = nodes.find((n) => n.current) ?? nodes[0]
-    const at = (current && positions.get(current.key)) ?? { x: 0, y: 0 }
-    // With nothing before it, the first sentence starts near the left edge
-    const lead = current?.depth
-      ? LEAD
-      : (DEFAULT_SIZE.width / 2 - 2 * LEAD) / START_SCALE
-    return { x: at.x + lead, y: at.y, scale: START_SCALE }
-  }, [nodes, positions])
+    const fit =
+      Math.min(DEFAULT_SIZE.width, DEFAULT_SIZE.height) / (2 * radius + RING)
+    return { x: 0, y: 0, scale: clampScale(Math.min(fit, 1)) }
+  }, [radius])
 
   const [camera, setCamera] = useState(initial)
   const [size, setSize] = useState(DEFAULT_SIZE)
@@ -122,6 +188,7 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
   }, [])
 
   const zoom = (factor: number) => setCamera((c) => zoomed(c, factor))
+  const showLabels = camera.scale >= LABEL_SCALE
   const width = size.width / camera.scale
   const height = size.height / camera.scale
   const viewBox = [
@@ -205,6 +272,13 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
           }
         }}
       >
+        {hedges.map((hedge, i) => (
+          <path
+            key={`hedge-${i}`}
+            d={hedgePath(hedge.radius, hedge.gaps, DOORWAY / camera.scale)}
+            className={styles.hedge}
+          />
+        ))}
         {nodes.map((node) => {
           const parent = node.parent ? byKey.get(node.parent) : undefined
           const from = parent ? positions.get(parent.key) : undefined
@@ -212,12 +286,10 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
           if (!from || !to) {
             return null
           }
-          // Flat beneath the parent's label, curving only near the child
-          const bend = to.x - 40
           return (
             <path
               key={`edge-${node.key}`}
-              d={`M${from.x} ${from.y} H${bend} C${bend + 25} ${from.y} ${to.x - 15} ${to.y} ${to.x} ${to.y}`}
+              d={mazePath(from, to)}
               className={node.onStory ? styles['edge-story'] : styles.edge}
             />
           )
@@ -227,25 +299,36 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
           if (!at) {
             return null
           }
+          // Labels run outward along their path, never upside down
+          const degrees = (at.angle * 180) / Math.PI
+          const flip = Math.cos(at.angle) < 0
           return (
             <g key={node.key} transform={`translate(${at.x} ${at.y})`}>
-              {node.current ? <circle r={10} className={styles.ring} /> : null}
+              {node.current ? (
+                <circle r={10 / camera.scale} className={styles.ring} />
+              ) : null}
               <circle
-                r={5}
+                r={5 / camera.scale}
                 className={node.onStory ? styles['dot-story'] : styles.dot}
               />
               <Link to={node.permalink} className={styles.label}>
                 <title>{node.content || 'Beginnings'}</title>
-                <text
-                  x={8}
-                  y={-8}
-                  className={node.onStory ? styles['text-story'] : undefined}
-                >
-                  {label(node)}
-                  {node.more ? (
-                    <tspan className={styles.more}> +{node.more}</tspan>
-                  ) : null}
-                </text>
+                {/* A wider target than the dot, for fingers */}
+                <circle r={14 / camera.scale} className={styles.target} />
+                {showLabels ? (
+                  <text
+                    transform={`rotate(${flip ? degrees + 180 : degrees})`}
+                    x={flip ? -8 : 8}
+                    y={-5}
+                    textAnchor={flip ? 'end' : 'start'}
+                    className={node.onStory ? styles['text-story'] : undefined}
+                  >
+                    {label(node)}
+                    {node.more ? (
+                      <tspan className={styles.more}> +{node.more}</tspan>
+                    ) : null}
+                  </text>
+                ) : null}
               </Link>
             </g>
           )
