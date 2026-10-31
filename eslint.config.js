@@ -8,7 +8,6 @@ export default tseslint.config(
       'dist',
       '.tanstack',
       'src/routeTree.gen.ts',
-      'src/server/db/types.ts',
       'test-results',
       'playwright-report',
     ],
@@ -19,7 +18,14 @@ export default tseslint.config(
   {
     files: ['server.js'],
     languageOptions: {
-      globals: { process: 'readonly', console: 'readonly', URL: 'readonly' },
+      globals: {
+        AbortController: 'readonly',
+        console: 'readonly',
+        Headers: 'readonly',
+        process: 'readonly',
+        Request: 'readonly',
+        URL: 'readonly',
+      },
     },
   },
 )

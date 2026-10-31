@@ -1,3 +1,2 @@
 pnpm-lock.yaml
 src/routeTree.gen.ts
-src/server/db/types.ts

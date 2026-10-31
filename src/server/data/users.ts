@@ -15,7 +15,7 @@ const RESET_TOKEN_MS = 60 * 60 * 1000
 
 // Compared against when an email is unknown, so timing reveals nothing
 const DUMMY_HASH =
-  '$2b$12$imPjWTavQjQ.DSfe/Vrz5uG8J4GmXJeOnOkk9ZOnkXtoEigvalU8K'
+  'scrypt$32768$8$1$NI3oZcqTsLo65Z8XU3giSg$6PnAzZ9CwipYDfJJ5ow03GTXnw3C9kBcshpjWBmAmGsBk9wBWr9-ojtjFdV7bb8bOY4evzSnESWH907DTVCFOg'
 
 const checkPassword = (password: string) => {
   if (password.length < MIN_PASSWORD_LENGTH) {

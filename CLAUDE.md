@@ -41,6 +41,11 @@ been built and decided.
   beside both notification checkboxes (one shared `NOTIFICATIONS_HINT`),
   because what people are signing up to by email is sensitive.
 
+## Database
+
+`src/server/db/types.ts` describes the tables for Kysely and is kept by
+hand: update it in the same change as any migration.
+
 ## Checks
 
 `pnpm check` (typecheck, lint, unit and data tests) and `pnpm test:e2e`

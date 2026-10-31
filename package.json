@@ -12,14 +12,12 @@
     "@resvg/resvg-js": "^2.6.2",
     "@tanstack/react-router": "^1.170.46",
     "@tanstack/react-start": "^1.169.4",
-    "bcryptjs": "^3.0.3",
     "d3-force": "^3.0.0",
     "kysely": "^0.29.7",
     "pg": "^8.23.1",
     "pg-boss": "^12.38.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "srvx": "^1.0.8",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -33,12 +31,10 @@
     "@vitejs/plugin-react": "^6.1.2",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "kysely-codegen": "^0.20.0",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",
     "vite": "^8.3.5",
-    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^5.0.5"
   },
   "scripts": {
@@ -46,7 +42,6 @@
     "build": "vite build",
     "start": "node --env-file-if-exists=.env server.js",
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.ts",
-    "db:codegen": "kysely-codegen --default-schema app --include-pattern \"app.*\" --exclude-pattern \"app.kysely_*\" --type-mapping \"{\\\"int8\\\":\\\"number\\\"}\" --overrides \"{\\\"columns\\\":{\\\"contributions.user_id\\\":\\\"number\\\",\\\"contributions.path_id\\\":\\\"number\\\",\\\"contributions.kind\\\":\\\"'write' | 'like' | 'title'\\\",\\\"contributions.created_at\\\":\\\"Date\\\"}}\" --out-file src/server/db/types.ts",
     "db:seed": "node --env-file-if-exists=.env scripts/seed.ts",
     "typecheck": "tsc",
     "lint": "eslint .",

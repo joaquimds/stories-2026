@@ -43,7 +43,6 @@ printed to the console instead of sent. The emails are styled like the app;
 | `pnpm dev`                  | Dev server with HMR                                          |
 | `pnpm build` / `pnpm start` | Production build and server (`server.js`)                    |
 | `pnpm db:migrate`           | Run migrations against `DATABASE_URL`                        |
-| `pnpm db:codegen`           | Regenerate `src/server/db/types.ts` from the database        |
 | `pnpm db:seed`              | Seed an empty database (`-- --reset` drops it first)         |
 | `pnpm email:preview`        | Write each email, with sample content, to `email-previews/`  |
 | `pnpm check`                | Typecheck, lint and unit/data tests                          |
@@ -61,7 +60,7 @@ serve it on port 3100. The compose file creates both databases.
 src/
   domain/          thread codec, pagination, slugs, search params (no I/O)
   server/
-    db/            Kysely instance, generated types, migrations
+    db/            Kysely instance, table types (kept by hand), migrations
     data/          queries and actions, taking a Kysely instance or transaction
     auth/          sessions, passwords, tokens, rate limits, request helpers
     jobs/          pg-boss lifecycle and workers
@@ -72,7 +71,7 @@ src/
   routes/          TanStack Router file routes
   components/      React components with CSS Modules
   styles/          global.css
-server.js          production HTTP server (srvx), SIGTERM handling
+server.js          production HTTP server (node:http, static files), SIGTERM handling
 scripts/           migrate, seed
 tests/data/        Vitest against Postgres, each test in a rolled-back transaction
 tests/e2e/         Playwright
