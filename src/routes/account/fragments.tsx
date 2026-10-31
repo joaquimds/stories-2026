@@ -11,7 +11,7 @@ export const Route = createFileRoute('/account/fragments')({
   validateSearch: listSearchSchema,
   loaderDeps: ({ search }) => ({ search }),
   loader: ({ deps }) => getFragments({ data: deps.search }),
-  head: () => ({ meta: [{ title: `Your Fragments | ${SITE_TITLE}` }] }),
+  head: () => ({ meta: [{ title: `Your fragments | ${SITE_TITLE}` }] }),
   component: Fragments,
 })
 
@@ -20,7 +20,7 @@ function Fragments() {
   const search = Route.useSearch()
   return (
     <div className={listStyles['list-page']}>
-      <h1>Your Fragments</h1>
+      <h1>Your fragments</h1>
       <SearchBox label="Search" value={search.q} />
       <SentenceList
         page={{

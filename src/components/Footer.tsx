@@ -7,7 +7,7 @@ export const Footer = () => (
     <p>
       Made by{' '}
       <a
-        href="https://twitter.com/joaquimds"
+        href="https://bsky.app/profile/joaquimds.bsky.social"
         target="_blank"
         rel="noopener noreferrer"
       >

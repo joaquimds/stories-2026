@@ -16,7 +16,7 @@ export const Navbar = ({ user }: { user: SessionUser | null }) => (
       {user ? (
         <Link to="/account">Account</Link>
       ) : (
-        <Link to="/login">Login</Link>
+        <Link to="/login">Log in</Link>
       )}
     </div>
   </nav>

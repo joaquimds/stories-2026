@@ -173,15 +173,15 @@ export const reportEmail = (
   const url = `${env().SITE_URL}${storyPath}`
   return {
     to,
-    subject: `Sentence Reported: ${sentenceId}`,
-    text: [`A reader reported sentence ${sentenceId}:`, content, url].join(
+    subject: `Fragment reported: ${sentenceId}`,
+    text: [`A reader reported fragment ${sentenceId}:`, content, url].join(
       '\n\n',
     ),
     html: layout({
       preview: content,
       body:
-        heading('A sentence was reported') +
-        paragraph(`A reader reported sentence ${sentenceId}:`) +
+        heading('A fragment was reported') +
+        paragraph(`A reader reported fragment ${sentenceId}:`) +
         card(content, url) +
         button(url, 'View it in its story'),
     }),

@@ -50,17 +50,17 @@ function Account() {
           disabled={busy}
           onChange={(e) => onChangeNotifiable(e.target.checked)}
         />
-        <label htmlFor="notifiable">Receive Email Notifications</label>
+        <label htmlFor="notifiable">Receive email notifications</label>
       </div>
       <ul>
         <li>
-          <Link to="/account/fragments">Your Fragments</Link>
+          <Link to="/account/fragments">Your fragments</Link>
         </li>
         <li>
-          <Link to="/account/links">Your Links</Link>
+          <Link to="/account/links">Your links</Link>
         </li>
         <li>
-          <Link to="/account/favourites">Your Favourites</Link>
+          <Link to="/account/favourites">Your favourites</Link>
         </li>
         <li>
           <button
@@ -70,7 +70,7 @@ function Account() {
             disabled={busy}
             onClick={onClickLogout}
           >
-            Log Out
+            Log out
           </button>
         </li>
       </ul>

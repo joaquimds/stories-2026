@@ -11,7 +11,7 @@ export const Route = createFileRoute('/account/links')({
   validateSearch: listSearchSchema,
   loaderDeps: ({ search }) => ({ search }),
   loader: ({ deps }) => getLinks({ data: deps.search }),
-  head: () => ({ meta: [{ title: `Your Links | ${SITE_TITLE}` }] }),
+  head: () => ({ meta: [{ title: `Your links | ${SITE_TITLE}` }] }),
   component: Links,
 })
 
@@ -20,7 +20,7 @@ function Links() {
   const search = Route.useSearch()
   return (
     <div className={listStyles['list-page']}>
-      <h1>Your Links</h1>
+      <h1>Your links</h1>
       <SearchBox label="Search" value={search.q} />
       <SentenceList
         page={{

@@ -45,7 +45,7 @@ test('edits in place and writes a variation', async ({ page }) => {
   await main(page).getByRole('button', { name: second }).click()
   await main(page).getByRole('button', { name: 'edit' }).click()
   await main(page)
-    .getByRole('textbox', { name: 'Sentence' })
+    .getByRole('textbox', { name: 'Fragment' })
     .fill(`${second}, edited`)
   await main(page).getByRole('button', { name: 'save', exact: true }).click()
   await expect(
@@ -56,7 +56,7 @@ test('edits in place and writes a variation', async ({ page }) => {
   const branch = unique('A different first line')
   await main(page).getByRole('button', { name: first }).click()
   await main(page).getByRole('button', { name: 'write a variation' }).click()
-  await main(page).getByRole('textbox', { name: 'Sentence' }).fill(branch)
+  await main(page).getByRole('textbox', { name: 'Fragment' }).fill(branch)
   await main(page).getByRole('button', { name: 'save variation' }).click()
   await expect(main(page).getByRole('button', { name: branch })).toBeVisible()
   await expect(
@@ -161,7 +161,7 @@ test('browses relatives in the link panel', async ({ page }) => {
 
 test('lists fragments on the account page', async ({ page }) => {
   await page.goto('/account')
-  await page.getByRole('link', { name: 'Your Fragments' }).click()
+  await page.getByRole('link', { name: 'Your fragments' }).click()
   await expect(
     main(page).getByRole('link', {
       name: 'She took the left path, towards the river.',

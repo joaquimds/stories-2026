@@ -11,7 +11,7 @@ export const Route = createFileRoute('/account/favourites')({
   validateSearch: listSearchSchema,
   loaderDeps: ({ search }) => ({ search }),
   loader: ({ deps }) => getFavourites({ data: deps.search }),
-  head: () => ({ meta: [{ title: `Your Favourites | ${SITE_TITLE}` }] }),
+  head: () => ({ meta: [{ title: `Your favourites | ${SITE_TITLE}` }] }),
   component: Favourites,
 })
 
@@ -20,7 +20,7 @@ function Favourites() {
   const search = Route.useSearch()
   return (
     <div className={listStyles['list-page']}>
-      <h1>Your Favourites</h1>
+      <h1>Your favourites</h1>
       <SearchBox label="Search" value={search.q} />
       <StoryCards page={page} toSearch={cursorSearch} />
     </div>

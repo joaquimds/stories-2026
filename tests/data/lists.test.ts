@@ -301,6 +301,17 @@ describe('users and sessions', () => {
         register(trx, { ...input, email: 'other@example.com' }),
       ).rejects.toMatchObject({
         code: 'duplicate',
+        message: 'That pen name is taken',
+      })
+      await expect(
+        register(trx, {
+          ...input,
+          name: 'Someone else',
+          email: 'WRITER@example.com',
+        }),
+      ).rejects.toMatchObject({
+        code: 'duplicate',
+        message: 'There is already an account with that email address',
       })
       await expect(
         register(trx, { ...input, name: 'x', password: 'short' }),

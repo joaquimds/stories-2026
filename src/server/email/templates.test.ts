@@ -80,9 +80,9 @@ describe('email templates', () => {
     expect(email.html).toContain('href="http://localhost:3000/s/The_Bridge"')
   })
 
-  it('shows the reported sentence', () => {
+  it('shows the reported fragment', () => {
     const email = reportEmail('admin@example.com', 7, 'Bad words', '/s/7')
-    expect(email.subject).toBe('Sentence Reported: 7')
+    expect(email.subject).toBe('Fragment reported: 7')
     expect(email.html).toContain('Bad words')
     expect(email.html).toContain('href="http://localhost:3000/s/7"')
   })

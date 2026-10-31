@@ -4,7 +4,7 @@ import { SITE_TITLE } from '../lib/site.ts'
 import { resetPassword } from '../server/fns/auth.ts'
 
 export const Route = createFileRoute('/reset')({
-  head: () => ({ meta: [{ title: `Reset Password | ${SITE_TITLE}` }] }),
+  head: () => ({ meta: [{ title: `Reset password | ${SITE_TITLE}` }] }),
   component: Reset,
 })
 
@@ -41,14 +41,14 @@ function Reset() {
       }
       setError(result.error)
     } catch {
-      setError('Unknown error')
+      setError('Something went wrong, please try again')
     }
     setBusy(false)
   }
 
   return (
     <div>
-      <h1>Reset Password</h1>
+      <h1>Reset password</h1>
       <form onSubmit={onSubmit} className="form">
         <label htmlFor="password">Password</label>
         <input

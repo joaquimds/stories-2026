@@ -67,7 +67,7 @@ test('shows titled stories by slug, through links and loops', async ({
 test('shows a not found page for unknown stories', async ({ page }) => {
   const response = await page.goto('/s/999999')
   expect(response?.status()).toBe(404)
-  await expect(page.getByText('Not Found')).toBeVisible()
+  await expect(page.getByText('Not found')).toBeVisible()
 })
 
 test('searches and sorts the library', async ({ page }) => {

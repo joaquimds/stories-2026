@@ -19,6 +19,20 @@ been built and decided.
   reach for one only when it does something we shouldn't (drawing PNGs with
   resvg, physics with d3-force), and say what it is for.
 
+## Copy
+
+- Sentence case everywhere, including headings, labels, buttons, page
+  titles and email subjects; never Title Case.
+- "Log in" (verb) and "log out", never "Login".
+- A piece of writing is a "fragment" in anything people read (code can
+  still say sentence).
+- Empty lists say "(no results)", in brackets.
+- Errors people can meet in normal use are friendly ("Wrong email or
+  password", "Something went wrong, please try again"); errors only reachable
+  by getting round the interface can stay technical ("Forbidden").
+- No explanatory hints on pages (see Exploration above). The one exception
+  is the login page's note that you'll be taken back to your story.
+
 ## Checks
 
 `pnpm check` (typecheck, lint, unit and data tests) and `pnpm test:e2e`

@@ -12,7 +12,7 @@ export const Route = createFileRoute('/stats')({
 function Stats() {
   const stats = Route.useLoaderData()
   const totals = [
-    ['Sentences', stats.sentences],
+    ['Fragments', stats.sentences],
     ['Writers', stats.writers],
     ['Favourites', stats.likes],
     ['Titled stories', stats.titledStories],
@@ -36,7 +36,7 @@ function Stats() {
         </tbody>
       </table>
 
-      <h2>Sentences written</h2>
+      <h2>Fragments written</h2>
       <table className={styles.table}>
         <tbody>
           {recent.map(([label, value]) => (
@@ -60,13 +60,13 @@ function Stats() {
         <dd>
           {stats.longestStory ? (
             <Link to={stats.longestStory.permalink}>
-              {stats.longestStory.length} sentences
+              {stats.longestStory.length} fragments
             </Link>
           ) : (
             '–'
           )}
         </dd>
-        <dt>The most-branched sentence</dt>
+        <dt>The most-branched fragment</dt>
         <dd>
           {stats.mostBranched ? (
             <>

@@ -14,9 +14,9 @@ export const unique = (text: string) =>
 
 export const login = async (page: Page, email: string, password = PASSWORD) => {
   await page.goto('/login')
-  await page.getByLabel('Email Address').fill(email)
+  await page.getByLabel('Email address').fill(email)
   await page.getByLabel('Password').fill(password)
-  await page.getByRole('button', { name: 'Login', exact: true }).click()
+  await page.getByRole('button', { name: 'Log in', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Account' })).toBeVisible()
 }
 

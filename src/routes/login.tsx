@@ -8,8 +8,8 @@ import styles from './login.module.css'
 
 const MODES = {
   register: 'Register',
-  login: 'Login',
-  forgotPassword: 'Forgot Password',
+  login: 'Log in',
+  forgotPassword: 'Forgot password',
 } as const
 
 type Mode = (typeof MODES)[keyof typeof MODES]
@@ -24,7 +24,7 @@ export const Route = createFileRoute('/login')({
       throw redirect({ href: safeNext(search.next) })
     }
   },
-  head: () => ({ meta: [{ title: `Login | ${SITE_TITLE}` }] }),
+  head: () => ({ meta: [{ title: `Log in | ${SITE_TITLE}` }] }),
   component: Login,
 })
 
@@ -60,7 +60,7 @@ function Login() {
         window.location.href = safeNext(next)
       }
     } catch {
-      setError('Invalid request')
+      setError('Something went wrong, please try again')
       setBusy(false)
     }
   }
@@ -92,7 +92,7 @@ function Login() {
       <form onSubmit={onSubmit} className="form">
         {mode === MODES.register ? (
           <>
-            <label htmlFor="name">Pen Name</label>
+            <label htmlFor="name">Pen name</label>
             <input
               type="text"
               id="name"
@@ -103,7 +103,7 @@ function Login() {
             />
           </>
         ) : null}
-        <label htmlFor="email">Email Address</label>
+        <label htmlFor="email">Email address</label>
         <input
           type="email"
           id="email"
@@ -114,7 +114,7 @@ function Login() {
         />
         {mode === MODES.register ? (
           <>
-            <label htmlFor="notifiable">Receive Email Notifications</label>
+            <label htmlFor="notifiable">Receive email notifications</label>
             <small>(sent when other writers add to your stories)</small>
             <input
               type="checkbox"

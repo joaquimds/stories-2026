@@ -139,12 +139,12 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
     ),
   },
   {
-    question: 'Can I change a sentence someone else wrote?',
+    question: 'Can I change a fragment someone else wrote?',
     answer: (
       <>
         <p>
           Not the original, but you can write a variation of it. Once you have
-          an account, click any sentence in a story and choose{' '}
+          an account, click any fragment in a story and choose{' '}
           {'"write a variation"'}. Your version becomes a new branch alongside
           the original, and the rest of the story carries on after it, so
           readers can follow either.

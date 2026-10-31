@@ -70,12 +70,6 @@
   }
 }
 
-.hint {
-  color: var(--color-grey-dark);
-  font-size: var(--font-size-0);
-  margin-bottom: var(--spacing-0);
-}
-
 .edit-save {
   color: var(--color-green);
   margin-right: var(--spacing-0);

@@ -73,7 +73,7 @@ export const Write = ({ story, user, search, link }: Props) => {
         setError(result.error)
       }
     } catch {
-      setError('Unknown error')
+      setError('Something went wrong, please try again')
     } finally {
       setBusy(false)
     }
@@ -96,7 +96,7 @@ export const Write = ({ story, user, search, link }: Props) => {
         setError(result.error)
       }
     } catch {
-      setError('Unknown error')
+      setError('Something went wrong, please try again')
     } finally {
       setBusy(false)
     }
@@ -153,7 +153,7 @@ export const Write = ({ story, user, search, link }: Props) => {
             </button>
           ) : (
             <button className="button">
-              {content.trim() ? 'Login to publish' : 'Login to contribute'}
+              {content.trim() ? 'Log in to publish' : 'Log in to contribute'}
             </button>
           )}
         </form>
@@ -238,7 +238,7 @@ const LinkBrowser = ({ search, page, busy, onLink }: BrowserProps) => {
             ))}
           </ul>
         ) : (
-          <p className={styles['no-results']}>no results</p>
+          <p className={styles['no-results']}>(no results)</p>
         )}
         <Pager
           page={page}

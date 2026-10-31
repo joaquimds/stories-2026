@@ -58,10 +58,13 @@ export const StoryText = ({ story, user }: Props) => {
       if (result.ok) {
         await then(result as Extract<T, { ok: true }>)
       } else {
-        setError((result as { error?: string }).error ?? 'Error')
+        setError(
+          (result as { error?: string }).error ??
+            'Something went wrong, please try again',
+        )
       }
     } catch {
-      setError('Unknown error')
+      setError('Something went wrong, please try again')
     } finally {
       setBusy(false)
     }
@@ -114,7 +117,7 @@ export const StoryText = ({ story, user }: Props) => {
           {editing?.index === line.index ? (
             <form className={styles.editing} onSubmit={onSubmitEdit}>
               <textarea
-                aria-label="Sentence"
+                aria-label="Fragment"
                 value={editing.content}
                 maxLength={280}
                 autoFocus
@@ -122,12 +125,6 @@ export const StoryText = ({ story, user }: Props) => {
                   setEditing({ ...editing, content: e.target.value })
                 }
               />
-              {editing.branch ? (
-                <p className={styles.hint}>
-                  Your variation becomes a new branch here, and the rest of the
-                  story follows it. The original stays as it is.
-                </p>
-              ) : null}
               <div>
                 <button
                   className={`${styles['edit-save']} link`}

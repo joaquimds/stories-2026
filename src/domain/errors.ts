@@ -1,6 +1,6 @@
 export const ERRORS = {
   invalid: 'Invalid request',
-  credentials: 'Bad credentials',
+  credentials: 'Wrong email or password',
   forbidden: 'Forbidden',
   notFound: 'Not found',
   duplicate: 'Duplicate',

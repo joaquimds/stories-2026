@@ -54,7 +54,18 @@ export const register = async (
     .returning('id')
     .executeTakeFirst()
   if (!row) {
-    throw new ActionError('duplicate', 'That pen name or email is taken')
+    // Pen names and emails compare case-insensitively (citext)
+    const nameTaken = await db
+      .selectFrom('users')
+      .select('id')
+      .where('name', '=', name)
+      .executeTakeFirst()
+    throw new ActionError(
+      'duplicate',
+      nameTaken
+        ? 'That pen name is taken'
+        : 'There is already an account with that email address',
+    )
   }
   return row.id
 }
