@@ -9,6 +9,7 @@ import { db } from '../db/index.ts'
 import { setLike } from '../data/likes.ts'
 import { linkSentence, unlinkSentence } from '../data/links.ts'
 import { resolveStory } from '../data/paths.ts'
+import { getStoryMap } from '../data/map.ts'
 import { randomStory } from '../data/random.ts'
 import { reportSentence } from '../data/reports.ts'
 import {
@@ -141,4 +142,20 @@ export const getStoryText = createServerFn({ method: 'GET' })
       sentences: lines.filter((l) => !l.deleted).map((l) => l.content),
       authors: lines.map((l) => l.author),
     }
+  })
+
+// The tree around a story, for the map
+export const getMap = createServerFn({ method: 'GET' })
+  .validator(z.object({ story }))
+  .handler(async ({ data }) => {
+    const database = db()
+    const resolved = await resolveStory(database, data.story)
+    if (!resolved) {
+      throw notFound()
+    }
+    const [nodes, view] = await Promise.all([
+      getStoryMap(database, resolved),
+      getStory(database, null, resolved),
+    ])
+    return { nodes, permalink: view.permalink, title: view.title }
   })

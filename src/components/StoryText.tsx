@@ -336,6 +336,13 @@ export const StoryText = ({ story, user }: Props) => {
         >
           read as one piece
         </Link>
+        <Link
+          to="/map/$story"
+          params={{ story: story.permalink.replace(/^\/s\//, '') }}
+          className={styles.read}
+        >
+          map
+        </Link>
       </div>
       {error ? <small className="error">{error}</small> : null}
     </>

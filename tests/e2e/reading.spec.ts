@@ -180,3 +180,17 @@ test('gives stories their own share image', async ({ page, request }) => {
   expect(response.status()).toBe(200)
   expect(response.headers()['content-type']).toBe('image/png')
 })
+
+test('maps the branches around a story', async ({ page }) => {
+  await page.goto('/s/The_Bridge')
+  await page.getByRole('link', { name: 'map', exact: true }).click()
+  await expect(page).toHaveURL('/map/The_Bridge')
+  await expect(
+    page.getByRole('heading', { name: 'Map of The Bridge' }),
+  ).toBeVisible()
+  const map = page.getByRole('img', { name: "Map of the story's branches" })
+  await expect(map).toBeVisible()
+  // The clearing was linked after the bridge
+  await map.getByRole('link', { name: /At the clearing/ }).click()
+  await expect(page).toHaveURL(/\/s\/\d+\.\d+-\d+$/)
+})

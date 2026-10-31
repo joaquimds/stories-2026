@@ -1,0 +1,86 @@
+.map {
+  border-radius: var(--spacing-1);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 60vh;
+  position: relative;
+}
+
+.controls {
+  display: flex;
+  gap: var(--spacing-1);
+  position: absolute;
+  right: var(--spacing-2);
+  top: var(--spacing-1);
+
+  button {
+    font-size: var(--font-size-3);
+  }
+}
+
+.canvas {
+  cursor: grab;
+  flex-grow: 1;
+  touch-action: none;
+  user-select: none;
+  width: 100%;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.edge {
+  fill: none;
+  stroke: var(--color-grey-medium);
+  stroke-width: 1.5;
+}
+
+.edge-story {
+  fill: none;
+  stroke: var(--color-black);
+  stroke-width: 2.5;
+}
+
+.dot {
+  fill: var(--color-white);
+  stroke: var(--color-grey-dark);
+  stroke-width: 1.5;
+}
+
+.dot-story {
+  fill: var(--color-black);
+}
+
+.ring {
+  fill: none;
+  stroke: var(--color-black);
+  stroke-width: 1.5;
+}
+
+.label {
+  cursor: pointer;
+
+  text {
+    fill: var(--color-grey-dark);
+    font-family: var(--font-family);
+    font-size: 15px;
+  }
+
+  &:hover text,
+  &:focus text {
+    fill: var(--color-black);
+    text-decoration: underline;
+  }
+}
+
+.label .text-story {
+  fill: var(--color-black);
+}
+
+.more {
+  fill: var(--color-grey-medium);
+  font-size: 12px;
+}

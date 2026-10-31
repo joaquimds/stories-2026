@@ -1,0 +1,58 @@
+import { describe, expect, it } from 'vitest'
+import { linkSentence } from '../../src/server/data/links.ts'
+import { getStoryMap } from '../../src/server/data/map.ts'
+import { resolveStory } from '../../src/server/data/paths.ts'
+import { createUser, leafOf, rollback, writeChain } from './helpers.ts'
+
+const limits = { trunk: 3, ahead: 2, aside: 1, children: 2, nodes: 50 }
+
+describe('getStoryMap', () => {
+  it(
+    'shows the end of the story, its branches, and what lies ahead',
+    rollback(async (trx) => {
+      const ana = await createUser(trx)
+      const [, b, c, d] = await writeChain(trx, ana, null, 'A', 'B', 'C', 'D')
+      // A branch off the story, which itself continues
+      await writeChain(trx, ana, b!, 'C2', 'C2-next')
+      // Ahead of D: three continuations, one three levels deep
+      await writeChain(trx, ana, d!, 'E', 'F', 'G')
+      await writeChain(trx, ana, d!, 'E2')
+      await writeChain(trx, ana, d!, 'E3')
+
+      const story = await resolveStory(trx, d!)
+      const nodes = await getStoryMap(trx, story!, limits)
+      const byContent = (content: string) =>
+        nodes.find((n) => n.content === content)
+
+      // The trunk is the last three sentences: B, C, D
+      expect(nodes[0]).toMatchObject({ content: 'B', depth: 0, onStory: true })
+      expect(byContent('A')).toBeUndefined()
+      expect(byContent('C')?.permalink).toBe(`/s/${c}`)
+      expect(byContent('D')).toMatchObject({ onStory: true, current: true })
+      // The branch off the story shows one level
+      expect(byContent('C2')).toMatchObject({ onStory: false, more: 1 })
+      expect(byContent('C2-next')).toBeUndefined()
+      // Ahead: two of the three continuations, then one more level
+      const ahead = nodes.filter((n) => n.parent === byContent('D')?.key)
+      expect(ahead.map((n) => n.content)).toEqual(['E', 'E2'])
+      expect(byContent('D')?.more).toBe(1)
+      expect(byContent('F')).toMatchObject({ depth: 4, more: 1 })
+      expect(byContent('G')).toBeUndefined()
+    }),
+  )
+
+  it(
+    'marks loops instead of following them',
+    rollback(async (trx) => {
+      const ana = await createUser(trx)
+      const [a, , c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
+      await linkSentence(trx, ana, { story: c!, sentenceId: leafOf(a!) })
+      const story = await resolveStory(trx, c!)
+      const nodes = await getStoryMap(trx, story!, { ...limits, trunk: 4 })
+      const loop = nodes.find((n) => n.loop)
+      expect(loop).toMatchObject({ content: 'A', depth: 4, more: 1 })
+      // The root is shown when the story is short enough
+      expect(nodes[0]).toMatchObject({ sentenceId: 0, permalink: '/' })
+    }),
+  )
+})
