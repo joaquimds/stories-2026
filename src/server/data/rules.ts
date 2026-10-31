@@ -177,3 +177,28 @@ export const digestCredits = async (
   `.execute(db)
   return rows
 }
+
+// How popular each sentence is, wherever it is read: the distinct writers
+// and likers at or below any path ending at it
+export const sentencePopularity = async (
+  db: Db,
+  sentenceIds: number[],
+): Promise<Map<number, number>> => {
+  if (!sentenceIds.length) {
+    return new Map()
+  }
+  const { rows } = await sql<{ sentence_id: number; score: number }>`
+    with recursive sub(sentence_id, path_id) as (
+      select p.sentence_id, p.id from app.paths p
+      where p.sentence_id = any(${sentenceIds}::bigint[])
+      union all
+      select sub.sentence_id, p.id from sub join app.paths p on p.parent_id = sub.path_id
+    )
+    select sub.sentence_id, count(distinct c.user_id)::int as score
+    from sub
+    join app.contributions c on c.path_id = sub.path_id
+    where c.kind in ('write', 'like')
+    group by sub.sentence_id
+  `.execute(db)
+  return new Map(rows.map((r) => [r.sentence_id, r.score]))
+}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { setLike } from '../../src/server/data/likes.ts'
 import { linkSentence } from '../../src/server/data/links.ts'
 import { getStoryMap } from '../../src/server/data/map.ts'
 import { resolveStory } from '../../src/server/data/paths.ts'
@@ -38,6 +39,32 @@ describe('getStoryMap', () => {
       expect(byContent('D')?.more).toBe(1)
       expect(byContent('F')).toMatchObject({ depth: 4, more: 1 })
       expect(byContent('G')).toBeUndefined()
+    }),
+  )
+
+  it(
+    'shows the most popular continuations first',
+    rollback(async (trx) => {
+      const [ana, bob, cat] = [
+        await createUser(trx),
+        await createUser(trx),
+        await createUser(trx),
+      ]
+      const [a] = await writeChain(trx, ana, null, 'A')
+      await writeChain(trx, ana, a!, 'Old')
+      const [quiet] = await writeChain(trx, ana, a!, 'Quiet')
+      const [liked] = await writeChain(trx, ana, a!, 'Liked')
+      await setLike(trx, bob, { story: liked!, liked: true })
+      await setLike(trx, cat, { story: liked!, liked: true })
+      await writeChain(trx, bob, quiet!, 'Continued')
+
+      const story = await resolveStory(trx, a!)
+      const nodes = await getStoryMap(trx, story!, limits)
+      const first = nodes.find((n) => n.content === 'A')!
+      const children = nodes.filter((n) => n.parent === first.key)
+      // Liked by three people in all, Quiet by two, Old by one; two shown
+      expect(children.map((n) => n.content)).toEqual(['Liked', 'Quiet'])
+      expect(first.more).toBe(1)
     }),
   )
 

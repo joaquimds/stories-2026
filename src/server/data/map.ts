@@ -2,6 +2,7 @@ import { sql } from 'kysely'
 import { ROOT_ID, permalink } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
 import { type ResolvedStory, loadDefaultParents, threadOf } from './paths.ts'
+import { sentencePopularity } from './rules.ts'
 
 // How much of the tree around a story to show
 export const MAP_LIMITS = {
@@ -11,7 +12,7 @@ export const MAP_LIMITS = {
   ahead: 3,
   // Levels shown along a branch that leaves the story
   aside: 2,
-  // Continuations shown per sentence
+  // Continuations shown per sentence, the most popular first
   children: 8,
   nodes: 150,
 }
@@ -116,7 +117,16 @@ export const getStoryMap = async (
         row.id,
       ])
     }
-    const texts = await content(rows.map((r) => r.id))
+    const [texts, popularity] = await Promise.all([
+      content(rows.map((r) => r.id)),
+      sentencePopularity(db, [...new Set(rows.map((r) => r.id))]),
+    ])
+    // Most popular first, then oldest, as on the story page
+    for (const children of childrenOf.values()) {
+      children.sort(
+        (a, b) => (popularity.get(b) ?? 0) - (popularity.get(a) ?? 0) || a - b,
+      )
+    }
 
     const next: Pending[] = []
     for (const { node, ids, budget } of frontier) {

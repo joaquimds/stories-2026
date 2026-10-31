@@ -27,7 +27,8 @@ decided against.
   it, laid out live by a d3-force simulation that settles differently each
   time: sentences are pulled out from the centre by depth, held to their
   continuations by springs, pushed apart and kept from overlapping. The
-  story is dark and the reader's position ringed. Pointing at a sentence
+  story is dark and the reader's position ringed. Where a sentence has more
+  continuations than fit, the most popular are shown. Pointing at a sentence
   (or a first tap on touch screens) shows it in full in a popover, which
   opens it when clicked. Drag to pan, scroll or buttons to zoom. How to read it is in
   the FAQ rather than on the page.
