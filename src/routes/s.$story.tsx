@@ -25,6 +25,7 @@ export const Route = createFileRoute('/s/$story')({
     const description =
       story.lines.find((l) => !l.deleted)?.content ?? SITE_DESCRIPTION
     const url = `${siteUrl}${story.permalink}`
+    const image = `${siteUrl}/og/${encodeURIComponent(story.permalink.replace(/^\/s\//, ''))}`
     return {
       meta: [
         { title },
@@ -34,6 +35,11 @@ export const Route = createFileRoute('/s/$story')({
         { property: 'og:url', content: url },
         { name: 'twitter:title', content: title },
         { name: 'twitter:description', content: description },
+        { property: 'og:image', content: image },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { name: 'twitter:image', content: image },
+        { name: 'twitter:card', content: 'summary_large_image' },
       ],
       links: [{ rel: 'canonical', href: url }],
     }

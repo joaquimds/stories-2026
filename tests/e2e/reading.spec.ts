@@ -169,3 +169,14 @@ test('opens a writer’s page from a byline', async ({ page }) => {
   await page.getByRole('link', { name: 'Titled' }).click()
   await expect(page.getByRole('heading', { name: 'The Bridge' })).toBeVisible()
 })
+
+test('gives stories their own share image', async ({ page, request }) => {
+  await page.goto('/s/The_Bridge')
+  const image = page.locator('meta[property="og:image"]')
+  await expect(image).toHaveCount(1)
+  const url = new URL((await image.getAttribute('content'))!)
+  expect(url.pathname).toBe('/og/The_Bridge')
+  const response = await request.get(url.pathname)
+  expect(response.status()).toBe(200)
+  expect(response.headers()['content-type']).toBe('image/png')
+})
