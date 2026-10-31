@@ -61,7 +61,9 @@ export const up = async (db: Kysely<unknown>) => {
       parent_id bigint references app.paths on delete cascade,
       sentence_id bigint not null references app.sentences on delete cascade,
       created_at timestamptz not null default now(),
-      unique nulls not distinct (parent_id, sentence_id)
+      unique nulls not distinct (parent_id, sentence_id),
+      -- Only the root's path has no parent
+      check ((parent_id is null) = (sentence_id = 0))
     );
 
     alter table app.sentences
@@ -112,6 +114,23 @@ export const up = async (db: Kysely<unknown>) => {
     insert into app.sentences (id, content) overriding system value values (0, '');
     insert into app.paths (parent_id, sentence_id) values (null, 0);
 
+    -- The root and its path hold every story together: deleting either
+    -- would cascade through all paths and links
+    create function app.protect_root() returns trigger
+      language plpgsql as $$
+      begin
+        raise exception 'The root % cannot be deleted or moved', tg_table_name;
+      end
+      $$;
+    create trigger protect_root
+      before delete or update of id on app.sentences
+      for each row when (old.id = 0)
+      execute function app.protect_root();
+    create trigger protect_root
+      before delete or update of id, parent_id, sentence_id on app.paths
+      for each row when (old.sentence_id = 0)
+      execute function app.protect_root();
+
     create view app.contributions as
       select s.author_id as user_id, p.id as path_id, 'write'::text as kind, s.created_at
       from app.sentences s
@@ -132,5 +151,6 @@ export const down = async (db: Kysely<unknown>) => {
     drop table app.reports, app.titles, app.likes, app.links,
       app.sentences, app.paths, app.rate_limits, app.password_reset_tokens,
       app.sessions, app.users cascade;
+    drop function app.protect_root;
   `.execute(db)
 }

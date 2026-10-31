@@ -111,15 +111,19 @@ Choices that aren't obvious from the code, mostly made while rebuilding the
 2020 app:
 
 - **TypeScript 6.0**, not 7: typescript-eslint does not support 7 yet.
-- **The root sentence `0`** is the parent of every beginning (each
-  beginning is written under its path and linked from it), and the home
-  page is its story, so the home page needs no
-  special case. Deleting a beginning that has continuations relinks them
-  from the root, the link browser treats beginnings as siblings, and an
-  existing sentence can be linked in as a new beginning. A check constraint
-  keeps the root contentless and authorless and stops anything linking to
-  it; the data layer leaves it out of story text, counts and searches, and
-  refuses to edit, like, title or report it. `/s/0` redirects to `/`.
+- **The root sentence `0`** is the parent of every beginning: each
+  beginning is written under the root's path and linked from it. The home
+  page is the root's story, so it needs no special case. Deleting a
+  beginning that has continuations relinks them from the root, the link
+  browser treats beginnings as siblings, and an existing sentence can be
+  linked in as a new beginning. `/s/0` redirects to `/`.
+
+  The database keeps the root safe. Check constraints keep it empty and
+  authorless, make it the only sentence without a parent path (and its path
+  the only path without a parent), and stop anything linking to it.
+  Triggers stop the root or its path being deleted, which would cascade
+  through every story. The data layer leaves the root out of story text,
+  counts and searches, and refuses to edit, like, title or report it.
 - **Rate limits** live in an extra `rate_limits` table (fixed windows).
   Login and password-reset attempts count even when they fail.
 - **Forgotten passwords** always report success, so the form doesn't reveal

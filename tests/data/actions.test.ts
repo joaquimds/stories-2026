@@ -1,4 +1,4 @@
-import { sql } from 'kysely'
+import { type RawBuilder, sql } from 'kysely'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { ActionError } from '../../src/domain/errors.ts'
 import { setLike } from '../../src/server/data/likes.ts'
@@ -142,6 +142,44 @@ describe('the root', () => {
         'forbidden',
       )
       await rejectsWith(reportSentence(trx, ana.id, 0), 'notFound')
+    }),
+  )
+})
+
+describe('the database', () => {
+  it(
+    'refuses to delete or change the root and its path',
+    rollback(async (trx) => {
+      // A failed statement would abort the test's transaction
+      const refuses = async (statement: RawBuilder<unknown>, error: RegExp) => {
+        await sql`savepoint attempt`.execute(trx)
+        await expect(statement.execute(trx)).rejects.toThrow(error)
+        await sql`rollback to savepoint attempt`.execute(trx)
+      }
+      const root = /The root sentences cannot/
+      await refuses(sql`delete from app.sentences where id = 0`, root)
+      await refuses(
+        sql`delete from app.paths where sentence_id = 0`,
+        /The root paths cannot/,
+      )
+      await refuses(
+        sql`update app.sentences set content = 'x' where id = 0`,
+        /sentences_check/,
+      )
+      await refuses(
+        sql`insert into app.links (from_sentence_id, to_sentence_id) values (0, 0)`,
+        /links_to_sentence_id_check/,
+      )
+      const ana = await createUser(trx)
+      const [a] = await writeChain(trx, ana, null, 'A')
+      await refuses(
+        sql`insert into app.paths (sentence_id) values (${leafOf(a!)})`,
+        /paths_check/,
+      )
+      await refuses(
+        sql`insert into app.sentences (content, author_id) values ('orphan', ${ana.id})`,
+        /sentences_check/,
+      )
     }),
   )
 })
