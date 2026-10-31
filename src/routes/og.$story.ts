@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { db } from '../server/db/index.ts'
 import { resolveStory } from '../server/data/paths.ts'
 import { getStory } from '../server/data/stories.ts'
-import { renderStoryImage } from '../server/og/image.tsx'
+import { renderStoryImage } from '../server/og/image.ts'
 
 // The share image for a story, by thread or slug
 export const Route = createFileRoute('/og/$story')({
