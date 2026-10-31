@@ -13,10 +13,7 @@ import styles from './StoryMap.module.css'
 
 // The distance each step along a story is pulled out from the centre
 const RING = 140
-const LABEL_LENGTH = 22
-// Every label shows once zoomed in this far; before that, only the
-// reader's sentence and the one pointed at
-const LABEL_SCALE = 0.9
+const POPOVER_WIDTH = 280
 // Room around the map when framing it
 const FRAME_MARGIN = 60
 // Until the map is measured in the browser
@@ -82,16 +79,8 @@ const framing = (
   return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, scale }
 }
 
-const label = (node: MapNode) => {
-  if (node.sentenceId === 0) {
-    return 'Beginnings'
-  }
-  const text =
-    node.content.length > LABEL_LENGTH
-      ? `${node.content.slice(0, LABEL_LENGTH).trimEnd()}…`
-      : node.content
-  return node.loop ? `↺ ${text}` : text
-}
+const sentence = (node: MapNode) =>
+  node.sentenceId === 0 ? 'Beginnings' : node.content
 
 // Runs the physics that lays out the map: sentences pulled out to a ring
 // for their depth, held to their continuations by springs, pushed apart
@@ -156,6 +145,18 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
   const [hovered, setHovered] = useState<string | null>(null)
   const pointerType = useRef<string>('mouse')
   const pressing = useRef(false)
+  // The popover closes a moment after the pointer leaves, so it can be
+  // reached from its dot
+  const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const show = (key: string) => {
+    clearTimeout(hideTimer.current)
+    setHovered(key)
+  }
+  const hideSoon = () => {
+    clearTimeout(hideTimer.current)
+    hideTimer.current = setTimeout(() => setHovered(null), 200)
+  }
+  useEffect(() => () => clearTimeout(hideTimer.current), [])
   const svg = useRef<SVGSVGElement>(null)
   // The latest camera, for the wheel listener
   const cameraRef = useRef(camera)
@@ -208,7 +209,6 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
   }, [])
 
   const zoom = (factor: number) => setChosen(zoomed(camera, factor))
-  const showLabels = camera.scale >= LABEL_SCALE
   const width = size.width / camera.scale
   const height = size.height / camera.scale
   const viewBox = [
@@ -217,6 +217,28 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
     width,
     height,
   ].join(' ')
+
+  // The popover sits above its dot, or below near the top, inside the map
+  const popover = (() => {
+    const node = hovered ? byKey.get(hovered) : undefined
+    const at = node ? positions.get(node.key) : undefined
+    if (!node || !at) {
+      return null
+    }
+    const x = (at.x - camera.x) * camera.scale + size.width / 2
+    const y = (at.y - camera.y) * camera.scale + size.height / 2
+    const half = Math.min(POPOVER_WIDTH, size.width - 16) / 2
+    const above = y > 140
+    return {
+      node,
+      style: {
+        left: Math.min(Math.max(x, half + 8), size.width - half - 8),
+        top: above ? y - 16 : y + 16,
+        maxWidth: half * 2,
+        transform: above ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+      },
+    }
+  })()
 
   return (
     <div className={styles.map}>
@@ -248,6 +270,9 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
         role="img"
         aria-label="Map of the story's branches"
         onPointerDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setHovered(null)
+          }
           drag.current = {
             x: event.clientX,
             y: event.clientY,
@@ -314,22 +339,19 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
           if (!at) {
             return null
           }
-          // Labels sit on the side facing the middle of the view, so they
-          // stay inside it
-          const leftward = at.x > camera.x
           return (
             <g
               key={node.key}
               transform={`translate(${at.x} ${at.y})`}
               onPointerEnter={(event) => {
-                // Touch has no hover: a first tap shows the label instead
+                // Touch has no hover: a first tap shows the sentence instead
                 if (event.pointerType === 'mouse') {
-                  setHovered(node.key)
+                  show(node.key)
                 }
               }}
               onPointerLeave={(event) => {
                 if (event.pointerType === 'mouse') {
-                  setHovered((key) => (key === node.key ? null : key))
+                  hideSoon()
                 }
               }}
               onPointerDown={(event) => {
@@ -337,12 +359,13 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
                 pressing.current = true
               }}
               onFocus={() => {
-                // Keyboard focus shows the label; a tap's focus waits for
-                // the tap itself
+                // Keyboard focus shows the sentence; a tap's focus waits
+                // for the tap itself
                 if (!pressing.current) {
-                  setHovered(node.key)
+                  show(node.key)
                 }
               }}
+              onBlur={hideSoon}
             >
               {node.current ? (
                 <circle r={10 / camera.scale} className={styles.ring} />
@@ -353,39 +376,48 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
               />
               <Link
                 to={node.permalink}
-                className={styles.label}
+                aria-label={sentence(node)}
+                className={styles.target}
                 onClick={(event) => {
                   pressing.current = false
                   // On touch screens, the first tap shows the sentence and
                   // a second opens it
                   if (pointerType.current === 'touch' && hovered !== node.key) {
                     event.preventDefault()
-                    setHovered(node.key)
+                    show(node.key)
                   }
                 }}
               >
-                <title>{node.content || 'Beginnings'}</title>
                 {/* A wider target than the dot, for fingers */}
-                <circle r={14 / camera.scale} className={styles.target} />
-                {showLabels || node.current || hovered === node.key ? (
-                  <text
-                    x={(leftward ? -12 : 12) / camera.scale}
-                    y={5 / camera.scale}
-                    textAnchor={leftward ? 'end' : 'start'}
-                    fontSize={15 / Math.min(camera.scale, 1)}
-                    className={node.onStory ? styles['text-story'] : undefined}
-                  >
-                    {label(node)}
-                    {node.more ? (
-                      <tspan className={styles.more}> +{node.more}</tspan>
-                    ) : null}
-                  </text>
-                ) : null}
+                <circle r={14 / camera.scale} />
               </Link>
             </g>
           )
         })}
       </svg>
+      {popover ? (
+        <div
+          className={styles.popover}
+          role="tooltip"
+          style={popover.style}
+          onPointerEnter={() => clearTimeout(hideTimer.current)}
+          onPointerLeave={(event) => {
+            if (event.pointerType === 'mouse') {
+              hideSoon()
+            }
+          }}
+        >
+          <Link to={popover.node.permalink} tabIndex={-1}>
+            {sentence(popover.node)}
+          </Link>
+          {popover.node.loop || popover.node.more ? (
+            <span className={styles.notes}>
+              {popover.node.loop ? '↺ ' : ''}
+              {popover.node.more ? `+${popover.node.more}` : ''}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }

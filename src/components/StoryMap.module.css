@@ -67,34 +67,40 @@
 }
 
 .target {
-  fill: transparent;
-}
-
-.label {
   cursor: pointer;
 
-  text {
-    fill: var(--color-grey-dark);
-    font-family: var(--font-family);
-    /* A white outline keeps labels readable over the lines */
-    paint-order: stroke;
-    stroke: var(--color-white);
-    stroke-linejoin: round;
-    stroke-width: 4px;
+  circle {
+    fill: transparent;
   }
 
-  &:hover text,
-  &:focus text {
-    fill: var(--color-black);
-    text-decoration: underline;
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible circle {
+    stroke: var(--color-black);
+    stroke-dasharray: 2 2;
   }
 }
 
-.label .text-story {
-  fill: var(--color-black);
+/* The full sentence for the dot pointed at, in the site's card style */
+.popover {
+  background: var(--color-white);
+  border-radius: var(--spacing-1);
+  box-shadow: var(--card-shadow);
+  padding: var(--spacing-1) var(--spacing-2);
+  position: absolute;
+  width: max-content;
+  z-index: 1;
+
+  a {
+    font-size: var(--font-size-2);
+  }
 }
 
-.more {
-  fill: var(--color-grey-medium);
-  font-size: 0.8em;
+.notes {
+  color: var(--color-grey-dark);
+  font-size: var(--font-size-0);
+  margin-left: var(--spacing-1);
+  white-space: nowrap;
 }
