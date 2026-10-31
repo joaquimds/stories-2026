@@ -11,7 +11,7 @@ export const Footer = () => (
         target="_blank"
         rel="noopener noreferrer"
       >
-        @joaquimds
+        @joaquimds.bsky.social
       </a>
     </p>
     <p className={styles.links}>
