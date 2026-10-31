@@ -9,9 +9,18 @@ rough, given how the app is built now.
   ("This week's beginning…"). It gives newcomers somewhere to start, and
   regulars a reason to come back. _Small: a featured beginning, chosen by
   hand._
-- **"Needs a continuation" list.** Recent sentences with no children, so
-  writers can find loose ends instead of always extending the popular
-  branches. _Small: one query and a page or home-page tab._
+- **A Recent page.** The newest sentences anywhere on the site, each opening
+  its story. "Newest" today only sorts the continuations of the story you're
+  on. It shows the site is alive, gives regulars a feed to check, and
+  includes sentences that have already been continued. _Small: one query and
+  a page._
+
+  Later, a **"loose ends only" filter** (sentences nothing follows yet) can
+  bring stalled stories back, sorted oldest first. A separate "needs a
+  continuation" page was considered, but early on it would nearly match
+  Recent, since new sentences rarely have continuations yet; it only differs
+  once abandoned branches pile up. _Small: one extra condition._
+
 - **Random story button.** It walks a random path from a random beginning to a
   tale's end. It suits the "garden of forking paths" idea. _Small._
 - **Writing without an account, held for later.** "Login to contribute" is
@@ -84,6 +93,6 @@ rough, given how the app is built now.
    reputation with SMTP2GO.
 2. **Moderation tools**, at least hiding a reported sentence from the admin
    email with one click.
-3. **"Needs a continuation"** and **fork icons** in the margin: cheap, and
-   they directly increase writing.
+3. **The Recent page** and **fork icons** in the margin: cheap, and they
+   help people find places to write.
 4. **The tree map**, as the signature feature once the basics are solid.
