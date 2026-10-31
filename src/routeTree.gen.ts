@@ -15,6 +15,7 @@ import { Route as FaqRouteImport } from './routes/faq'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RandomRouteImport } from './routes/random'
 import { Route as RecentRouteImport } from './routes/recent'
 import { Route as ResetRouteImport } from './routes/reset'
 import { Route as StatsRouteImport } from './routes/stats'
@@ -52,6 +53,11 @@ const LibraryRoute = LibraryRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RandomRoute = RandomRouteImport.update({
+  id: '/random',
+  path: '/random',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecentRoute = RecentRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/health': typeof HealthRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/random': typeof RandomRoute
   '/recent': typeof RecentRoute
   '/reset': typeof ResetRoute
   '/stats': typeof StatsRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/health': typeof HealthRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/random': typeof RandomRoute
   '/recent': typeof RecentRoute
   '/reset': typeof ResetRoute
   '/stats': typeof StatsRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/health': typeof HealthRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/random': typeof RandomRoute
   '/recent': typeof RecentRoute
   '/reset': typeof ResetRoute
   '/stats': typeof StatsRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/library'
     | '/login'
+    | '/random'
     | '/recent'
     | '/reset'
     | '/stats'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/library'
     | '/login'
+    | '/random'
     | '/recent'
     | '/reset'
     | '/stats'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/library'
     | '/login'
+    | '/random'
     | '/recent'
     | '/reset'
     | '/stats'
@@ -200,6 +212,7 @@ export interface RootRouteChildren {
   HealthRoute: typeof HealthRoute
   LibraryRoute: typeof LibraryRoute
   LoginRoute: typeof LoginRoute
+  RandomRoute: typeof RandomRoute
   RecentRoute: typeof RecentRoute
   ResetRoute: typeof ResetRoute
   StatsRoute: typeof StatsRoute
@@ -248,6 +261,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/random': {
+      id: '/random'
+      path: '/random'
+      fullPath: '/random'
+      preLoaderRoute: typeof RandomRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recent': {
@@ -333,6 +353,7 @@ const rootRouteChildren: RootRouteChildren = {
   HealthRoute: HealthRoute,
   LibraryRoute: LibraryRoute,
   LoginRoute: LoginRoute,
+  RandomRoute: RandomRoute,
   RecentRoute: RecentRoute,
   ResetRoute: ResetRoute,
   StatsRoute: StatsRoute,

@@ -9,6 +9,7 @@ import { db } from '../db/index.ts'
 import { setLike } from '../data/likes.ts'
 import { linkSentence, unlinkSentence } from '../data/links.ts'
 import { resolveStory } from '../data/paths.ts'
+import { randomStory } from '../data/random.ts'
 import { reportSentence } from '../data/reports.ts'
 import {
   MAX_CONTENT_LENGTH,
@@ -119,3 +120,7 @@ export const report = createServerFn({ method: 'POST' })
       return reportSentence(trx, user?.id ?? null, data.sentenceId)
     })
   })
+
+export const getRandomStory = createServerFn({ method: 'GET' }).handler(() =>
+  randomStory(db()),
+)

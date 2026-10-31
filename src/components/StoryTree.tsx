@@ -42,8 +42,9 @@ export const StoryTree = ({
         <div className={`${styles.content} ${styles.page}`}>
           {story.isRoot ? (
             <p className={styles.begin}>
-              (choose a beginning, start a new story, or{' '}
-              <Link to="/library">visit the library</Link>)
+              (choose a beginning, start a new story,{' '}
+              <Link to="/library">visit the library</Link>, or{' '}
+              <RandomLink>read a random story</RandomLink>)
             </p>
           ) : (
             <StoryText story={story} user={user} />
@@ -73,9 +74,12 @@ export const StoryTree = ({
             </ul>
           ) : (
             <p className={styles.end}>
-              {story.isRoot
-                ? null
-                : "(tale's end. write more or link to another)"}
+              {story.isRoot ? null : (
+                <>
+                  (tale&apos;s end. write more, link to another, or{' '}
+                  <RandomLink>read a random story</RandomLink>)
+                </>
+              )}
             </p>
           )}
           <Pager
@@ -92,3 +96,10 @@ export const StoryTree = ({
     </div>
   )
 }
+
+// Never preloaded: each visit picks a different story
+const RandomLink = ({ children }: { children: React.ReactNode }) => (
+  <Link to="/random" preload={false}>
+    {children}
+  </Link>
+)

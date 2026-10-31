@@ -124,3 +124,10 @@ test('lists recent sentences and loose ends', async ({ page }) => {
     }),
   ).toBeVisible()
 })
+
+test('reads a random story', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('link', { name: 'read a random story' }).click()
+  await expect(page).toHaveURL(/\/s\//)
+  await expect(page.locator('main').getByText(/^By /)).toBeVisible()
+})
