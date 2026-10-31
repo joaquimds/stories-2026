@@ -28,7 +28,7 @@ export default defineConfig({
       DATABASE_URL: E2E_DATABASE_URL,
       SESSION_SECRET: E2E_SESSION_SECRET,
       SITE_URL: `http://localhost:${PORT}`,
-      EMAIL_FROM: 'noreply@stories.joaqu.im',
+      EMAIL_FROM: 'noreply@follow.joaqu.im',
       SMTP2GO_API_KEY: '',
     },
   },

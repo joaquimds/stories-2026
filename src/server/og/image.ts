@@ -40,7 +40,7 @@ let assets: Promise<Assets> | undefined
 const loadAssets = () => {
   assets ??= (async () => {
     const require = createRequire(import.meta.url)
-    const dir = join(tmpdir(), 'tree-of-tales-fonts')
+    const dir = join(tmpdir(), 'follow-fonts')
     await mkdir(dir, { recursive: true })
     const entries = await Promise.all(
       Object.entries(FONTS).map(async ([style, file]) => {

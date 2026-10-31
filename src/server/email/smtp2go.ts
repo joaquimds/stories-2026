@@ -1,3 +1,4 @@
+import { SITE_TITLE } from '../../lib/site.ts'
 import { env } from '../env.ts'
 
 export type Email = {
@@ -21,7 +22,7 @@ export const sendEmail = async (email: Email) => {
       'X-Smtp2go-Api-Key': SMTP2GO_API_KEY,
     },
     body: JSON.stringify({
-      sender: `Tree of Tales <${EMAIL_FROM}>`,
+      sender: `${SITE_TITLE} <${EMAIL_FROM}>`,
       to: [email.to],
       subject: email.subject,
       text_body: email.text,

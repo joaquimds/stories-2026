@@ -13,8 +13,8 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
     question: 'What is this website for?',
     answer: (
       <p>
-        Tree of Tales is a free online tool for reading and writing
-        collaborative, non-linear fiction.
+        Follow is a free online tool for reading and writing collaborative,
+        non-linear fiction.
       </p>
     ),
   },

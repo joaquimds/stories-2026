@@ -1,4 +1,4 @@
-# Tree of Tales
+# Follow
 
 _A garden of forking paths._ Collaborative, non-linear fiction: people write
 sentences that continue other sentences, and link sentences into other
@@ -87,18 +87,18 @@ UptimeRobot.
    `postgres.<project-ref>`) and append `?sslmode=require&uselibpqcompat=true`
    (encrypted, with libpq's meaning of `require`). The direct connection is
    IPv6-only and transaction mode breaks prepared statements.
-2. **SMTP2GO**: verify `stories.joaqu.im` as a sender domain (add its DNS
+2. **SMTP2GO**: verify `follow.joaqu.im` as a sender domain (add its DNS
    records) and create an API key that can send email.
 3. **Render**: create a free web service from this repository.
    - Build command: `pnpm install --frozen-lockfile && pnpm build`
    - Start command: `pnpm start`
    - Health check path: `/health`
    - Environment: `DATABASE_URL`, `SESSION_SECRET` (a long random string),
-     `SITE_URL=https://stories.joaqu.im`, `SMTP2GO_API_KEY`,
-     `EMAIL_FROM=noreply@stories.joaqu.im`, optionally `ADMIN_EMAIL`, and
+     `SITE_URL=https://follow.joaqu.im`, `SMTP2GO_API_KEY`,
+     `EMAIL_FROM=noreply@follow.joaqu.im`, optionally `ADMIN_EMAIL`, and
      `NODE_VERSION=26`.
-   - Add the custom domain `stories.joaqu.im` and its CNAME record.
-4. **UptimeRobot**: an HTTP monitor on `https://stories.joaqu.im/health`
+   - Add the custom domain `follow.joaqu.im` and its CNAME record.
+4. **UptimeRobot**: an HTTP monitor on `https://follow.joaqu.im/health`
    every 5 minutes keeps the free instance awake.
 
 Each start runs pending migrations (under Kysely's migration lock), starts

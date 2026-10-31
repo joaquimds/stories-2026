@@ -1,4 +1,4 @@
-export const SITE_TITLE = 'Tree of Tales'
+export const SITE_TITLE = 'Follow'
 export const SITE_DESCRIPTION = 'A garden of forking paths.'
 // Beside both notification checkboxes (registering and the account page)
 export const NOTIFICATIONS_HINT =
