@@ -29,7 +29,6 @@
 
 .editing {
   textarea {
-    font-family: var(--font-family);
     font-size: var(--font-size-2);
     height: 5rem;
     padding: var(--spacing-0);

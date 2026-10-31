@@ -2,6 +2,7 @@
 @import '@fontsource/eb-garamond/400-italic.css';
 @import '@fontsource/eb-garamond/700.css';
 @import '@fontsource/eb-garamond/700-italic.css';
+@import '@fontsource/courier-prime/400.css';
 
 :root {
   --color-black: #333333;
@@ -32,6 +33,8 @@
   --spacing-6: 5rem;
 
   --font-family: 'EB Garamond', serif;
+  /* Text boxes are typed into, like paper in a typewriter */
+  --font-typewriter: 'Courier Prime', 'Courier New', monospace;
   --card-shadow: 0 0 var(--spacing-1) var(--color-grey-dark);
   --max-width: 720px;
 }
@@ -153,6 +156,12 @@ button {
 .form {
   display: flex;
   flex-direction: column;
+}
+
+input,
+textarea {
+  color: var(--color-black);
+  font-family: var(--font-typewriter);
 }
 
 input,
