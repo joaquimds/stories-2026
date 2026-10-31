@@ -28,18 +28,13 @@ rough, given how the app is built now.
 - **Show where the story forks.** At the moment you only see the branches at
   the end of a story, not the alternatives at each sentence along the way.
   Counts printed inline ("Once upon a time (7 branches)…") would break up
-  the prose, so keep the text untouched:
-  - a faint mark in the margin beside sentences that have alternatives, like
-    a marginal note in a printed book, which the eye reads past;
-  - clicking the sentence (or the mark) adds "3 other paths" to its actions
-    row, which opens the alternatives.
-
-  Readers who ignore the marks see the story as now. Anonymous readers don't
-  get the actions row (each line is a link for them), so the mark itself
-  needs to open the alternatives. A "show forks" toggle was considered, but
-  few readers would find it; the tree map could take this over later.
-  _Small to medium._
-
+  the prose, so keep the text untouched: put a small path icon in the margin
+  beside sentences that have alternatives, like a marginal note in a printed
+  book, which the eye reads past. Clicking the icon opens the alternatives,
+  for signed-in and anonymous readers alike. The sentence's actions row
+  stays as it is. Readers who ignore the icons see the story as now. A "show
+  forks" toggle was considered, but few readers would find it; the tree map
+  could take this over later. _Small to medium._
 - **Better link previews when shared.** Use a story's first sentence and
   title in its preview image, rather than the tree for everything. _Medium:
   generating images on the server._
@@ -89,6 +84,6 @@ rough, given how the app is built now.
    reputation with SMTP2GO.
 2. **Moderation tools**, at least hiding a reported sentence from the admin
    email with one click.
-3. **"Needs a continuation"** and **fork marks** in the margin: cheap, and
+3. **"Needs a continuation"** and **fork icons** in the margin: cheap, and
    they directly increase writing.
 4. **The tree map**, as the signature feature once the basics are solid.
