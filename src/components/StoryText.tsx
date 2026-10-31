@@ -207,7 +207,7 @@ export const StoryText = ({ story, user }: Props) => {
       ))}
       <Authors authors={lines.map((l) => l.author)} />
       {reported ? (
-        <p className={styles.reported}>reported</p>
+        <p className={styles.reported}>(reported)</p>
       ) : titling ? (
         <form onSubmit={onSubmitTitle} className={styles.form}>
           <label htmlFor="title">Title</label>

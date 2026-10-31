@@ -20,7 +20,7 @@ export const Pager = ({ page, toSearch }: Props) => {
           search={(prev: object) => ({ ...prev, ...toSearch(page.prev!) })}
           rel="prev"
         >
-          ← Previous
+          (previous)
         </Link>
       ) : (
         <span />
@@ -31,14 +31,14 @@ export const Pager = ({ page, toSearch }: Props) => {
           search={(prev: object) => ({ ...prev, ...toSearch(page.next!) })}
           rel="next"
         >
-          Next →
+          (next)
         </Link>
       ) : (
         <span />
       )}
       {page.truncated ? (
         <p className={styles.note}>
-          (showing the top 100 — sort by newest or search to find more)
+          (showing the top 100; sort by newest or search to find more)
         </p>
       ) : null}
     </div>

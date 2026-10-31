@@ -3,6 +3,7 @@ import { ActionError } from '../../domain/errors.ts'
 import type { Page, PageParams } from '../../domain/pagination.ts'
 import { PAGE_SIZE } from '../../domain/pagination.ts'
 import { ROOT_ID } from '../../domain/thread.ts'
+import { ROOT_NAME } from '../../lib/site.ts'
 import type { Db } from '../db/index.ts'
 import { keysetPage, keysetQuery, searchPattern } from './paging.ts'
 import {
@@ -92,9 +93,6 @@ export const unlinkSentence = async (
   return { parentThread: parentThread as string }
 }
 
-// Shown in place of the root's empty content
-const BEGINNING = '(begin)'
-
 export type LinkItem = {
   id: number
   fromContent: string
@@ -166,7 +164,7 @@ export const myLinks = async (
       id: r.id,
       fromContent:
         r.from_id === ROOT_ID
-          ? BEGINNING
+          ? ROOT_NAME
           : maskContent(r.from_content, r.from_deleted_at),
       toContent: maskContent(r.to_content, r.to_deleted_at),
       permalink: permalink(threads[i] as string),

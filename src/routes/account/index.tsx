@@ -1,7 +1,7 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { forgetAppContext } from '../../lib/app-context.ts'
-import { SITE_TITLE } from '../../lib/site.ts'
+import { NOTIFICATIONS_HINT, SITE_TITLE } from '../../lib/site.ts'
 import { logout, updateSettings } from '../../server/fns/auth.ts'
 import styles from './account.module.css'
 
@@ -51,6 +51,7 @@ function Account() {
           onChange={(e) => onChangeNotifiable(e.target.checked)}
         />
         <label htmlFor="notifiable">Receive email notifications</label>
+        <small>{NOTIFICATIONS_HINT}</small>
       </div>
       <ul>
         <li>

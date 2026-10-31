@@ -9,6 +9,7 @@ import {
 } from 'd3-force'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapNode } from '../server/data/map.ts'
+import { ROOT_NAME } from '../lib/site.ts'
 import styles from './StoryMap.module.css'
 
 // The distance each step along a story is pulled out from the centre
@@ -80,7 +81,7 @@ const framing = (
 }
 
 const sentence = (node: MapNode) =>
-  node.sentenceId === 0 ? 'Beginnings' : node.content
+  node.sentenceId === 0 ? ROOT_NAME : node.content
 
 // Runs the physics that lays out the map: sentences pulled out to a ring
 // for their depth, held to their continuations by springs, pushed apart

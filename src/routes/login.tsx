@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 import { z } from 'zod'
 import { safeNext } from '../lib/drafts.ts'
-import { SITE_TITLE } from '../lib/site.ts'
+import { NOTIFICATIONS_HINT, SITE_TITLE } from '../lib/site.ts'
 import { forgotPassword, login, register } from '../server/fns/auth.ts'
 import styles from './login.module.css'
 
@@ -115,7 +115,7 @@ function Login() {
         {mode === MODES.register ? (
           <>
             <label htmlFor="notifiable">Receive email notifications</label>
-            <small>(sent when other writers add to your stories)</small>
+            <small>{NOTIFICATIONS_HINT}</small>
             <input
               type="checkbox"
               id="notifiable"

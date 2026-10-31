@@ -26,12 +26,20 @@ been built and decided.
 - "Log in" (verb) and "log out", never "Login".
 - A piece of writing is a "fragment" in anything people read (code can
   still say sentence).
-- Empty lists say "(no results)", in brackets.
+- Parentheses are the site's quiet narrator voice: lowercase asides that
+  stand in where content is missing ("(no results)", "(reported)", "(tale's
+  end; …)", "(the beginning)" for the root), gentle links ("(back to the
+  story)", "(previous)", "(next)") and small notes. One clause each; join
+  clauses with a semicolon. Procedural messages, such as "Please check your
+  email for further instructions.", are plain sentences.
 - Errors people can meet in normal use are friendly ("Wrong email or
   password", "Something went wrong, please try again"); errors only reachable
   by getting round the interface can stay technical ("Forbidden").
-- No explanatory hints on pages (see Exploration above). The one exception
-  is the login page's note that you'll be taken back to your story.
+- No explanatory hints on pages (see Exploration above). The exceptions:
+  the login page's note that you'll be taken back to your story, the note
+  where a Popular list stops at the top 100, and the notifications hint
+  beside both notification checkboxes (one shared `NOTIFICATIONS_HINT`),
+  because what people are signing up to by email is sensitive.
 
 ## Checks
 

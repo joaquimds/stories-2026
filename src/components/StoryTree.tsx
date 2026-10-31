@@ -76,7 +76,7 @@ export const StoryTree = ({
             <p className={styles.end}>
               {story.isRoot ? null : (
                 <>
-                  (tale&apos;s end. write more, link to another, or{' '}
+                  (tale&apos;s end; write more, link to another, or{' '}
                   <RandomLink>read a random story</RandomLink>)
                 </>
               )}

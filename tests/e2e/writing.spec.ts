@@ -23,7 +23,7 @@ test('writes a new story and continues it', async ({ page }) => {
   const second = unique('there was a test')
   await page.goto('/')
   await writeSentence(page, first)
-  await expect(main(page).getByText("(tale's end.")).toBeVisible()
+  await expect(main(page).getByText("(tale's end;")).toBeVisible()
   await writeSentence(page, second)
   await expect(main(page).getByRole('button', { name: first })).toBeVisible()
   await expect(main(page).getByRole('button', { name: second })).toBeVisible()
