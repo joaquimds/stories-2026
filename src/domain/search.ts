@@ -40,3 +40,11 @@ export const recentSearchSchema = pageSearchSchema.extend({
 })
 
 export type RecentSearch = z.infer<typeof recentSearchSchema>
+
+export const AUTHOR_TABS = ['fragments', 'titled', 'favourites'] as const
+
+export const authorSearchSchema = pageSearchSchema.extend({
+  tab: z.enum(AUTHOR_TABS).optional().catch(undefined),
+})
+
+export type AuthorSearch = z.infer<typeof authorSearchSchema>

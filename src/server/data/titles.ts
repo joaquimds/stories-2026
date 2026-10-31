@@ -66,13 +66,17 @@ export const setTitle = async (
   return { slug }
 }
 
-// Titled stories
+// Titled stories, optionally only those titled by one writer
 export const library = async (
   db: Db,
   params: PageParams,
   search?: string,
+  { authorId }: { authorId?: number } = {},
 ): Promise<Page<StorySummary>> => {
   let query = db.selectFrom('titles as t').select(['t.path_id', 't.title'])
+  if (authorId !== undefined) {
+    query = query.where('t.author_id', '=', authorId)
+  }
   if (search) {
     query = query.where('t.title', 'ilike', searchPattern(search))
   }

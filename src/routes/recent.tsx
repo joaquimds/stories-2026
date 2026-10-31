@@ -1,4 +1,5 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { AuthorLink } from '../components/Authors.tsx'
 import listStyles from '../components/ListPage.module.css'
 import { Pager } from '../components/Pager.tsx'
 import sortStyles from '../components/Sort.module.css'
@@ -59,7 +60,8 @@ function Recent() {
                   <Link to={item.permalink}>{item.content}</Link>
                 </p>
                 <p className={styles.meta}>
-                  {item.authorName}, {formatDate(item.createdAt)}
+                  <AuthorLink name={item.authorName} />,{' '}
+                  {formatDate(item.createdAt)}
                 </p>
               </li>
             ))}

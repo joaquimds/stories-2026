@@ -7,6 +7,7 @@ import { deleteSentence, myFragments } from '../../src/server/data/sentences.ts'
 import { computeStats, countLoops } from '../../src/server/data/stats.ts'
 import { library, setTitle } from '../../src/server/data/titles.ts'
 import {
+  findAuthor,
   authenticate,
   register,
   requestPasswordReset,
@@ -51,6 +52,29 @@ describe('library', () => {
       ])
       const search = await library(trx, { order: 'newest' }, 'upon')
       expect(search.items.map((i) => i.title)).toEqual(['Upon a time'])
+    }),
+  )
+})
+
+describe('author pages', () => {
+  it(
+    'finds writers by pen name, ignoring case, with what they have done',
+    rollback(async (trx) => {
+      const ana = await createUser(trx, 'Ana Author')
+      const [, b] = await writeChain(trx, ana, null, 'A', 'B')
+      await setTitle(trx, ana, { story: b!, title: 'Anas Story' })
+      const author = await findAuthor(trx, 'ana author')
+      expect(author).toMatchObject({
+        id: ana.id,
+        name: 'Ana Author',
+        sentences: 2,
+        titles: 1,
+      })
+      expect(await findAuthor(trx, 'nobody')).toBeNull()
+      const titled = await library(trx, { order: 'newest' }, undefined, {
+        authorId: ana.id,
+      })
+      expect(titled.items.map((i) => i.title)).toEqual(['Anas Story'])
     }),
   )
 })

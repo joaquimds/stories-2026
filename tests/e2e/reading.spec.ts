@@ -155,3 +155,17 @@ test('shows where a story could have gone another way', async ({ page }) => {
   ).toBeVisible()
   await expect(page).toHaveURL(/\/s\/\d+$/)
 })
+
+test('opens a writer’s page from a byline', async ({ page }) => {
+  await page.goto('/s/The_Bridge')
+  await page.locator('main').getByRole('link', { name: 'Bob' }).click()
+  await expect(page).toHaveURL('/w/Bob')
+  await expect(page.getByRole('heading', { name: 'Bob' })).toBeVisible()
+  await expect(
+    page.getByRole('link', {
+      name: 'She took the left path, towards the river.',
+    }),
+  ).toBeVisible()
+  await page.getByRole('link', { name: 'Titled' }).click()
+  await expect(page.getByRole('heading', { name: 'The Bridge' })).toBeVisible()
+})

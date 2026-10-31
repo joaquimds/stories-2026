@@ -1,4 +1,7 @@
-// "By X, Y and Z", most prolific first, ties in order of appearance
+import { Link } from '@tanstack/react-router'
+
+// "By X, Y and Z", most prolific first, ties in order of appearance; each
+// name links to the writer's page
 export const Authors = ({
   authors,
   className,
@@ -20,10 +23,21 @@ export const Authors = ({
   if (!names.length) {
     return null
   }
-  const last = names.pop()
   return (
     <p className={className}>
-      By {names.length ? `${names.join(', ')} and ${last}` : last}
+      By{' '}
+      {names.map((name, i) => (
+        <span key={name}>
+          {i === 0 ? '' : i === names.length - 1 ? ' and ' : ', '}
+          <AuthorLink name={name} />
+        </span>
+      ))}
     </p>
   )
 }
+
+export const AuthorLink = ({ name }: { name: string }) => (
+  <Link to="/w/$name" params={{ name }}>
+    {name}
+  </Link>
+)

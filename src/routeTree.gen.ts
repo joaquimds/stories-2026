@@ -25,6 +25,7 @@ import { Route as AccountFragmentsRouteImport } from './routes/account/fragments
 import { Route as AccountLinksRouteImport } from './routes/account/links'
 import { Route as ReadStoryRouteImport } from './routes/read.$story'
 import { Route as SStoryRouteImport } from './routes/s.$story'
+import { Route as WNameRouteImport } from './routes/w.$name'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -106,6 +107,11 @@ const SStoryRoute = SStoryRouteImport.update({
   path: '/s/$story',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WNameRoute = WNameRouteImport.update({
+  id: '/w/$name',
+  path: '/w/$name',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/account/links': typeof AccountLinksRoute
   '/read/$story': typeof ReadStoryRoute
   '/s/$story': typeof SStoryRoute
+  '/w/$name': typeof WNameRoute
   '/account/': typeof AccountIndexRoute
 }
 export interface FileRoutesByTo {
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/account/links': typeof AccountLinksRoute
   '/read/$story': typeof ReadStoryRoute
   '/s/$story': typeof SStoryRoute
+  '/w/$name': typeof WNameRoute
   '/account': typeof AccountIndexRoute
 }
 export interface FileRoutesById {
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/account/links': typeof AccountLinksRoute
   '/read/$story': typeof ReadStoryRoute
   '/s/$story': typeof SStoryRoute
+  '/w/$name': typeof WNameRoute
   '/account/': typeof AccountIndexRoute
 }
 export interface FileRouteTypes {
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/account/links'
     | '/read/$story'
     | '/s/$story'
+    | '/w/$name'
     | '/account/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/account/links'
     | '/read/$story'
     | '/s/$story'
+    | '/w/$name'
     | '/account'
   id:
     | '__root__'
@@ -214,6 +225,7 @@ export interface FileRouteTypes {
     | '/account/links'
     | '/read/$story'
     | '/s/$story'
+    | '/w/$name'
     | '/account/'
   fileRoutesById: FileRoutesById
 }
@@ -230,6 +242,7 @@ export interface RootRouteChildren {
   StatsRoute: typeof StatsRoute
   ReadStoryRoute: typeof ReadStoryRoute
   SStoryRoute: typeof SStoryRoute
+  WNameRoute: typeof WNameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -346,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SStoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/w/$name': {
+      id: '/w/$name'
+      path: '/w/$name'
+      fullPath: '/w/$name'
+      preLoaderRoute: typeof WNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -379,6 +399,7 @@ const rootRouteChildren: RootRouteChildren = {
   StatsRoute: StatsRoute,
   ReadStoryRoute: ReadStoryRoute,
   SStoryRoute: SStoryRoute,
+  WNameRoute: WNameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

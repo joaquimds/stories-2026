@@ -144,3 +144,47 @@ export const updateSettings = async (
     .where('id', '=', userId)
     .execute()
 }
+
+export type AuthorProfile = {
+  id: number
+  name: string
+  since: string
+  sentences: number
+  titles: number
+}
+
+// A writer's public profile, found by pen name (case-insensitively)
+export const findAuthor = async (
+  db: Db,
+  name: string,
+): Promise<AuthorProfile | null> => {
+  const row = await db
+    .selectFrom('users as u')
+    .select((eb) => [
+      'u.id',
+      'u.name',
+      'u.created_at',
+      eb
+        .selectFrom('sentences as s')
+        .select((e) => e.fn.countAll<number>().as('n'))
+        .whereRef('s.author_id', '=', 'u.id')
+        .where('s.deleted_at', 'is', null)
+        .as('sentences'),
+      eb
+        .selectFrom('titles as t')
+        .select((e) => e.fn.countAll<number>().as('n'))
+        .whereRef('t.author_id', '=', 'u.id')
+        .as('titles'),
+    ])
+    .where('u.name', '=', name)
+    .executeTakeFirst()
+  return row
+    ? {
+        id: row.id,
+        name: row.name,
+        since: row.created_at.toISOString(),
+        sentences: Number(row.sentences ?? 0),
+        titles: Number(row.titles ?? 0),
+      }
+    : null
+}
