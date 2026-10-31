@@ -23,11 +23,14 @@ decided against.
   lists up to five, each opening that version of the story, with a link to
   all of them. Counts printed inline were rejected as breaking up the prose,
   and the actions row is unchanged. The opening sentence has none.
-- **Map** (`/map/<story>`, linked as "map"): the end of the story, every
-  branch along it and a few levels ahead, as a left-to-right tree drawn in
-  SVG. The story is dark, the reader's position ringed, loops marked and not
-  followed, and "+N" shows more beyond. Drag to pan, scroll or buttons to
-  zoom; no libraries.
+- **Map** (`/map/<story>`, linked as "map"): the story and the paths around
+  it, laid out live by a d3-force simulation that settles differently each
+  time: sentences are pulled out from the centre by depth, held to their
+  continuations by springs, pushed apart and kept from overlapping. The
+  story is dark and the reader's position ringed. Labels show on hover (a
+  first tap on touch screens; a second tap opens), or all at once when
+  zoomed in. Drag to pan, scroll or buttons to zoom. How to read it is in
+  the FAQ rather than on the page.
 - **Read as one piece** (`/read/<story>`): the story as continuous prose with
   its title and byline, skipping deleted sentences; prints without the
   site's header and footer.

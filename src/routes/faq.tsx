@@ -35,6 +35,51 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
     ),
   },
   {
+    question: 'Where can I find something new to read?',
+    answer: (
+      <>
+        <p>
+          The <Link to="/recent">recent</Link> page lists the newest fragments
+          from every story. Its {'"Loose ends"'} list shows fragments that
+          nothing follows yet, oldest first: good places to pick up a story
+          someone left behind.
+        </p>
+        <p>
+          Or <Link to="/random">read a random story</Link>, which wanders from a
+          beginning, taking a different turn each time.
+        </p>
+      </>
+    ),
+  },
+  {
+    question: 'What are the small icons beside some fragments?',
+    answer: (
+      <p>
+        They mark places where the story could have gone another way. Click one
+        to see the other paths from that point.
+      </p>
+    ),
+  },
+  {
+    question: 'How do I read the map?',
+    answer: (
+      <>
+        <p>
+          Every story has a map, found under the story text. It grows out from
+          the story&apos;s earlier fragments: the story you are reading is drawn
+          dark, with a ring where you are, and the other paths branch off around
+          it.
+        </p>
+        <p>
+          Point at a fragment to see it, or tap it on a phone, and click it (or
+          tap again) to go there. Drag to move around and scroll to zoom. A{' '}
+          {'"↺"'} marks a path that loops back on itself, and {'"+"'} with a
+          number shows how many more paths lie beyond.
+        </p>
+      </>
+    ),
+  },
+  {
     question: 'How do I create a new story?',
     answer: (
       <p>

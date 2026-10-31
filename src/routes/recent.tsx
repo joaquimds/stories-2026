@@ -43,11 +43,6 @@ function Recent() {
           Loose ends
         </Link>
       </div>
-      {loose ? (
-        <p className={styles.note}>
-          (sentences nothing follows yet, oldest first)
-        </p>
-      ) : null}
       {page.items.length ? (
         <>
           <ul className={styles.list}>

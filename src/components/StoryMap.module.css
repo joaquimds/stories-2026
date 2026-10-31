@@ -32,14 +32,6 @@
   }
 }
 
-.hedge {
-  fill: none;
-  stroke: var(--color-grey-light);
-  stroke-linecap: round;
-  stroke-width: 10;
-  vector-effect: non-scaling-stroke;
-}
-
 .edge {
   fill: none;
   stroke: var(--color-grey-medium);
@@ -84,7 +76,11 @@
   text {
     fill: var(--color-grey-dark);
     font-family: var(--font-family);
-    font-size: 15px;
+    /* A white outline keeps labels readable over the lines */
+    paint-order: stroke;
+    stroke: var(--color-white);
+    stroke-linejoin: round;
+    stroke-width: 4px;
   }
 
   &:hover text,
@@ -100,5 +96,5 @@
 
 .more {
   fill: var(--color-grey-medium);
-  font-size: 12px;
+  font-size: 0.8em;
 }
