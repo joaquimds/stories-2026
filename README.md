@@ -124,6 +124,7 @@ Choices that aren't obvious from the code, mostly made while rebuilding the
   Triggers stop the root or its path being deleted, which would cascade
   through every story. The data layer leaves the root out of story text,
   counts and searches, and refuses to edit, like, title or report it.
+
 - **Rate limits** live in an extra `rate_limits` table (fixed windows).
   Login and password-reset attempts count even when they fail.
 - **Forgotten passwords** always report success, so the form doesn't reveal
