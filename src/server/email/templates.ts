@@ -1,15 +1,138 @@
+// Emails styled like the app: EB Garamond (Georgia where web fonts aren't
+// loaded), the app's greys, sentences as cards and buttons like `.button`.
+// Table layout and inline styles, as email clients need.
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../lib/site.ts'
 import { env } from '../env.ts'
 import type { Email } from './smtp2go.ts'
 
-const escapeHtml = (value: string) =>
+const COLORS = {
+  black: '#333333',
+  white: '#ffffff',
+  greyDark: '#666666',
+  greyLight: '#ebebeb',
+  greyTint: '#f5f5f5',
+}
+
+const FONT = "'EB Garamond', Georgia, 'Times New Roman', serif"
+
+export const escapeHtml = (value: string) =>
   value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 
-const layout = (body: string) =>
-  `<div style="font-family: 'EB Garamond', Georgia, serif; color: #333333; font-size: 16px">${body}</div>`
+const style = (rules: Record<string, string | number>) =>
+  Object.entries(rules)
+    .map(
+      ([key, value]) =>
+        `${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}:${value}`,
+    )
+    .join(';')
+
+const paragraph = (html: string) =>
+  `<p style="${style({ margin: '0 0 16px', fontSize: '17px', lineHeight: '1.5' })}">${html}</p>`
+
+const heading = (text: string) =>
+  `<h1 style="${style({
+    margin: '0 0 16px',
+    fontFamily: FONT,
+    fontSize: '26px',
+    fontWeight: 'bold',
+    lineHeight: '1.2',
+  })}">${escapeHtml(text)}</h1>`
+
+const link = (url: string, text: string) =>
+  `<a href="${escapeHtml(url)}" style="${style({ color: COLORS.black })}">${text}</a>`
+
+// Like the app's `.button`
+const button = (url: string, text: string) => `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px">
+    <tr><td style="${style({
+      background: COLORS.greyTint,
+      border: `1px solid ${COLORS.greyDark}`,
+      borderRadius: '4px',
+    })}">
+      <a href="${escapeHtml(url)}" style="${style({
+        display: 'inline-block',
+        padding: '8px 20px',
+        color: COLORS.black,
+        fontFamily: FONT,
+        fontSize: '17px',
+        textDecoration: 'none',
+      })}">${escapeHtml(text)}</a>
+    </td></tr>
+  </table>`
+
+// A sentence as a card, like the children of a story in the app
+const card = (content: string, url: string) => `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px">
+    <tr><td style="${style({
+      padding: '16px',
+      border: `1px solid ${COLORS.greyLight}`,
+      borderRadius: '8px',
+      boxShadow: `0 0 8px ${COLORS.greyDark}`,
+      textAlign: 'center',
+      fontSize: '18px',
+      lineHeight: '1.4',
+    })}">
+      <a href="${escapeHtml(url)}" style="${style({ color: COLORS.black, textDecoration: 'none' })}">${escapeHtml(content)}</a>
+    </td></tr>
+  </table>`
+
+const layout = ({
+  preview,
+  body,
+  footer = '',
+}: {
+  preview: string
+  body: string
+  footer?: string
+}) => {
+  const site = env().SITE_URL
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>${SITE_TITLE}</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+</head>
+<body style="${style({ margin: 0, padding: 0, background: COLORS.white })}">
+<div style="display:none;max-height:0;overflow:hidden">${escapeHtml(preview)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${style({ background: COLORS.white })}">
+  <tr><td align="center" style="padding:0 16px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${style(
+      {
+        maxWidth: '560px',
+        fontFamily: FONT,
+        color: COLORS.black,
+      },
+    )}">
+      <tr><td style="${style({ padding: '8px 0', borderBottom: `1px solid ${COLORS.greyLight}` })}">
+        <a href="${site}" style="${style({ color: COLORS.black, textDecoration: 'none', fontSize: '17px' })}">
+          <img src="${site}/email-logo.png" width="64" height="48" alt="" style="vertical-align:middle;border:0;margin-right:4px">
+          <span style="vertical-align:middle">${SITE_TITLE}</span>
+        </a>
+      </td></tr>
+      <tr><td style="padding:32px 0 8px">${body}</td></tr>
+      <tr><td style="${style({
+        padding: '12px 0 32px',
+        borderTop: `1px solid ${COLORS.greyLight}`,
+        color: COLORS.greyDark,
+        fontSize: '14px',
+        lineHeight: '1.5',
+      })}">
+        ${footer}<em>${SITE_DESCRIPTION}</em>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`
+}
 
 const prettyJoin = (items: string[]) =>
   items.length <= 1
@@ -21,11 +144,23 @@ export const passwordResetEmail = (to: string, token: string): Email => {
   return {
     to,
     subject: 'Password reset',
-    text: `Go to ${url} to reset your password. The link expires in an hour.`,
-    html: layout(
-      `<p>Click here to reset your password: <a href="${url}">${url}</a></p>` +
-        '<p>The link expires in an hour.</p>',
-    ),
+    text: [
+      'Reset your password',
+      `Go to ${url} to choose a new password. The link expires in an hour.`,
+      "If you didn't ask to reset your password, you can ignore this email.",
+    ].join('\n\n'),
+    html: layout({
+      preview: 'Choose a new password. The link expires in an hour.',
+      body:
+        heading('Reset your password') +
+        paragraph(
+          'Use the button below to choose a new password. The link expires in an hour.',
+        ) +
+        button(url, 'Reset password') +
+        paragraph(
+          `<span style="color:${COLORS.greyDark};font-size:15px">If you didn't ask to reset your password, you can ignore this email.</span>`,
+        ),
+    }),
   }
 }
 
@@ -39,29 +174,54 @@ export const reportEmail = (
   return {
     to,
     subject: `Sentence Reported: ${sentenceId}`,
-    text: `${content}\n\n${url}`,
-    html: layout(
-      `<p>${escapeHtml(content)}</p><p><a href="${url}">${url}</a></p>`,
+    text: [`A reader reported sentence ${sentenceId}:`, content, url].join(
+      '\n\n',
     ),
+    html: layout({
+      preview: content,
+      body:
+        heading('A sentence was reported') +
+        paragraph(`A reader reported sentence ${sentenceId}:`) +
+        card(content, url) +
+        button(url, 'View it in its story'),
+    }),
   }
 }
 
-// One line per author: "Read what X wrote here and here."
+export type DigestSentence = { content: string; path: string }
+
+// The new sentences under each author's name, as cards that open them in
+// their stories
 export const digestEmail = (
   to: string,
-  byAuthor: Map<string, string[]>,
+  byAuthor: Map<string, DigestSentence[]>,
 ): Email => {
   const site = env().SITE_URL
-  let text = ''
-  let html = ''
-  for (const [author, paths] of byAuthor) {
-    const urls = paths.map((path) => `${site}${path}`)
-    text += `Read what ${author} wrote at ${prettyJoin(urls)}\n\n`
-    html += `<p>Read what ${escapeHtml(author)} wrote ${prettyJoin(
-      urls.map((url) => `<a href="${url}">here</a>`),
-    )}.</p>`
+  const authors = [...byAuthor.keys()]
+  const intro = `${prettyJoin(authors)} added to your ${
+    [...byAuthor.values()].flat().length > 1 ? 'stories' : 'story'
+  }.`
+  const account = `${site}/account`
+
+  let text = `${intro}\n\n`
+  let body = heading('Your story was added to') + paragraph(escapeHtml(intro))
+  for (const [author, sentences] of byAuthor) {
+    text += `${author} wrote:\n\n`
+    body += paragraph(`<strong>${escapeHtml(author)}</strong> wrote:`)
+    for (const { content, path } of sentences) {
+      text += `  ${content}\n  ${site}${path}\n\n`
+      body += card(content, `${site}${path}`)
+    }
   }
-  text += 'You can turn off these emails on your account page.'
-  html += `<p>You can turn off these emails on your <a href="${site}/account">account page</a>.</p>`
-  return { to, subject: 'Your story was added to!', text, html: layout(html) }
+  text += `You can turn off these emails on your account page: ${account}`
+  return {
+    to,
+    subject: 'Your story was added to!',
+    text,
+    html: layout({
+      preview: intro,
+      body: body + button(site, 'Keep reading'),
+      footer: `You can turn off these emails on your ${link(account, 'account page')}.<br>`,
+    }),
+  }
 }

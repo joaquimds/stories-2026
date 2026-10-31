@@ -33,7 +33,8 @@ starts pg-boss on the first request. Seeded accounts (`ana@example.com`,
 `bob@example.com`, `cat@example.com`) use the password `password`.
 
 Without `SMTP2GO_API_KEY`, emails (password resets, digests, reports) are
-printed to the console instead of sent.
+printed to the console instead of sent. The emails are styled like the app;
+`pnpm email:preview` writes them out so you can open them in a browser.
 
 ### Scripts
 
@@ -44,6 +45,7 @@ printed to the console instead of sent.
 | `pnpm db:migrate`           | Run migrations against `DATABASE_URL`                        |
 | `pnpm db:codegen`           | Regenerate `src/server/db/types.ts` from the database        |
 | `pnpm db:seed`              | Seed an empty database (`-- --reset` drops it first)         |
+| `pnpm email:preview`        | Write each email, with sample content, to `email-previews/`  |
 | `pnpm check`                | Typecheck, lint and unit/data tests                          |
 | `pnpm test`                 | Unit and data-layer tests (uses the `stories_test` database) |
 | `pnpm test:e2e`             | Playwright tests (uses the `stories_e2e` database)           |

@@ -112,10 +112,15 @@ describe('digest recipients', () => {
       await writeChain(trx, cat, null, 'Elsewhere')
       const entries = await digestEntries(trx, new Date(Date.now() + 1000))
       expect(
-        entries.map((e) => [e.email.split('@')[0], e.authorName, e.sentenceId]),
+        entries.map((e) => [
+          e.email.split('@')[0],
+          e.authorName,
+          e.sentenceId,
+          e.content,
+        ]),
       ).toEqual([
-        ['ana-digest', 'bob-digest', leafOf(c!)],
-        ['bob-digest', 'ana-digest', leafOf(c!) + 1],
+        ['ana-digest', 'bob-digest', leafOf(c!), 'C'],
+        ['bob-digest', 'ana-digest', leafOf(c!) + 1, 'D'],
       ])
     }),
   )

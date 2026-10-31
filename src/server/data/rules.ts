@@ -65,6 +65,7 @@ export type DigestEntry = {
   userId: number
   email: string
   sentenceId: number
+  content: string
   authorName: string
   originPathId: number
 }
@@ -102,6 +103,7 @@ export const digestEntries = async (
       u.id as "userId",
       u.email,
       f.id as "sentenceId",
+      s.content,
       a.name as "authorName",
       f.origin_path_id as "originPathId"
     from up
