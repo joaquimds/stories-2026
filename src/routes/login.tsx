@@ -1,5 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
+import { z } from 'zod'
+import { safeNext } from '../lib/drafts.ts'
 import { SITE_TITLE } from '../lib/site.ts'
 import { forgotPassword, login, register } from '../server/fns/auth.ts'
 import styles from './login.module.css'
@@ -13,9 +15,13 @@ const MODES = {
 type Mode = (typeof MODES)[keyof typeof MODES]
 
 export const Route = createFileRoute('/login')({
-  beforeLoad: ({ context }) => {
+  // Where to go afterwards, such as a story with an unsent draft
+  validateSearch: z.object({
+    next: z.string().max(2000).optional().catch(undefined),
+  }),
+  beforeLoad: ({ context, search }) => {
     if (context.user) {
-      throw redirect({ to: '/' })
+      throw redirect({ href: safeNext(search.next) })
     }
   },
   head: () => ({ meta: [{ title: `Login | ${SITE_TITLE}` }] }),
@@ -23,6 +29,7 @@ export const Route = createFileRoute('/login')({
 })
 
 function Login() {
+  const { next } = Route.useSearch()
   const [mode, setMode] = useState<Mode>(MODES.login)
   const [busy, setBusy] = useState(false)
   const [sentEmail, setSentEmail] = useState(false)
@@ -50,7 +57,7 @@ function Login() {
         setSentEmail(true)
       } else {
         // A full load picks up the new session everywhere
-        window.location.href = '/'
+        window.location.href = safeNext(next)
       }
     } catch {
       setError('Invalid request')
@@ -77,6 +84,11 @@ function Login() {
   return (
     <div className={styles.login}>
       <h1>{mode}</h1>
+      {next && mode !== MODES.forgotPassword ? (
+        <p className={styles.note}>
+          (log in or register, then you&apos;ll be taken back to your story)
+        </p>
+      ) : null}
       <form onSubmit={onSubmit} className="form">
         {mode === MODES.register ? (
           <>

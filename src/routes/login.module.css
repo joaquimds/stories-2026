@@ -21,3 +21,8 @@
 .error {
   margin-bottom: var(--spacing-0);
 }
+
+.note {
+  color: var(--color-grey-dark);
+  margin-bottom: var(--spacing-1);
+}

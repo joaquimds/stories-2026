@@ -62,3 +62,27 @@ test('requires login for account pages', async ({ page }) => {
   await page.goto('/account/fragments')
   await expect(page).toHaveURL(/\/login$/)
 })
+
+test('writes before logging in, then publishes', async ({ page }) => {
+  const sentence = unique('Written before logging in')
+  await page.goto('/s/The_Bridge')
+  await page.getByRole('textbox', { name: 'Write' }).fill(sentence)
+  await page.getByRole('button', { name: 'Login to publish' }).click()
+  await expect(page).toHaveURL(/\/login\?next=/)
+  await expect(page.getByText('taken back to your story')).toBeVisible()
+
+  await page.getByLabel('Email Address').fill('ana@example.com')
+  await page.getByLabel('Password').fill('password')
+  await page.getByRole('button', { name: 'Login', exact: true }).click()
+  await expect(page).toHaveURL('/s/The_Bridge')
+  await expect(page.getByRole('textbox', { name: 'Write' })).toHaveValue(
+    sentence,
+  )
+  await page.getByRole('button', { name: 'Submit' }).click()
+  await expect(
+    page.locator('main').getByRole('button', { name: sentence }),
+  ).toBeVisible()
+  // The draft is gone once published
+  await page.goto('/s/The_Bridge')
+  await expect(page.getByRole('textbox', { name: 'Write' })).toHaveValue('')
+})

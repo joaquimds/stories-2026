@@ -1,5 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
+import { loadDraft, saveDraft } from '../lib/drafts.ts'
 import type { Page } from '../domain/pagination.ts'
 import type { StorySearch } from '../domain/search.ts'
 import type { SessionUser } from '../server/auth/sessions.ts'
@@ -26,17 +27,38 @@ const LINK_RESET = {
 export const Write = ({ story, user, search, link }: Props) => {
   const navigate = useNavigate()
   const [content, setContent] = useState('')
+  const [draftStory, setDraftStory] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // On the home page, linking makes an existing sentence a new beginning
   const canLink = Boolean(user)
   const linking = canLink && search.tab === 'link'
 
+  // Brings back an unsent draft for this story once in the browser
+  useEffect(() => {
+    if (draftStory !== story.thread) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state, after hydration
+      setContent(loadDraft(story.thread))
+      setDraftStory(story.thread)
+    }
+  }, [draftStory, story.thread])
+
+  const onChange = (value: string) => {
+    setContent(value)
+    saveDraft(story.thread, value)
+  }
+
   const goTo = (thread: string) =>
     navigate({ to: '/s/$story', params: { story: thread } })
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) {
+      // Keep what they wrote, and come back to it after logging in
+      saveDraft(story.thread, content)
+      await navigate({ to: '/login', search: { next: story.permalink } })
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -45,6 +67,7 @@ export const Write = ({ story, user, search, link }: Props) => {
       })
       if (result.ok) {
         setContent('')
+        saveDraft(story.thread, '')
         await goTo(result.thread)
       } else {
         setError(result.error)
@@ -120,9 +143,8 @@ export const Write = ({ story, user, search, link }: Props) => {
           <textarea
             aria-label="Write"
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => onChange(e.target.value)}
             placeholder="Write"
-            disabled={!user}
             maxLength={280}
           />
           {user ? (
@@ -130,9 +152,9 @@ export const Write = ({ story, user, search, link }: Props) => {
               Submit
             </button>
           ) : (
-            <Link to="/login" className="button">
-              Login to contribute
-            </Link>
+            <button className="button">
+              {content.trim() ? 'Login to publish' : 'Login to contribute'}
+            </button>
           )}
         </form>
       )}
