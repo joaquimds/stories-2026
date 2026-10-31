@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { digestEmail, passwordResetEmail, reportEmail } from './templates.ts'
+import {
+  type Digest,
+  digestEmail,
+  passwordResetEmail,
+  reportEmail,
+} from './templates.ts'
+
+const digest = (parts: Partial<Digest>): Digest => ({
+  additions: new Map(),
+  favourites: new Map(),
+  titles: new Map(),
+  ...parts,
+})
 
 describe('email templates', () => {
   it('links the reset page with the token in the fragment', () => {
@@ -12,9 +24,11 @@ describe('email templates', () => {
   it('escapes what readers wrote', () => {
     const email = digestEmail(
       'ana@example.com',
-      new Map([
-        ['<b>Bob</b>', [{ content: 'A <script> & "quote"', path: '/s/5' }]],
-      ]),
+      digest({
+        additions: new Map([
+          ['<b>Bob</b>', [{ content: 'A <script> & "quote"', path: '/s/5' }]],
+        ]),
+      }),
     )
     expect(email.html).not.toContain('<script>')
     expect(email.html).not.toContain('<b>Bob</b>')
@@ -25,16 +39,18 @@ describe('email templates', () => {
   it('lists each author’s sentences and the way to turn digests off', () => {
     const email = digestEmail(
       'ana@example.com',
-      new Map([
-        [
-          'Bob',
+      digest({
+        additions: new Map([
           [
-            { content: 'One', path: '/s/1' },
-            { content: 'Two', path: '/s/2' },
+            'Bob',
+            [
+              { content: 'One', path: '/s/1' },
+              { content: 'Two', path: '/s/2' },
+            ],
           ],
-        ],
-        ['Cat', [{ content: 'Three', path: '/s/3' }]],
-      ]),
+          ['Cat', [{ content: 'Three', path: '/s/3' }]],
+        ]),
+      }),
     )
     expect(email.text).toContain('Bob and Cat added to your stories.')
     expect(
@@ -44,6 +60,24 @@ describe('email templates', () => {
     expect(email.html).toMatch(
       /href="http:\/\/localhost:3000" [^>]*>Back to the beginning</,
     )
+  })
+
+  it('credits favourites and titles', () => {
+    const email = digestEmail(
+      'ana@example.com',
+      digest({
+        favourites: new Map([
+          ['Dan', [{ label: 'The Bridge', path: '/s/The_Bridge' }]],
+        ]),
+        titles: new Map([['Eve', [{ label: 'Waiting', path: '/s/Waiting' }]]]),
+      }),
+    )
+    expect(email.subject).toBe('Your story was favourited!')
+    expect(email.text).toContain(
+      'Dan favourited your story. Eve titled your story.',
+    )
+    expect(email.text).toContain('Eve titled:')
+    expect(email.html).toContain('href="http://localhost:3000/s/The_Bridge"')
   })
 
   it('shows the reported sentence', () => {

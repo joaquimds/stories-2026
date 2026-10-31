@@ -121,3 +121,59 @@ export const digestEntries = async (
   `.execute(db)
   return rows
 }
+
+export type DigestCredit = {
+  userId: number
+  email: string
+  kind: 'like' | 'title'
+  actorName: string
+  pathId: number
+}
+
+// For each notifiable user: favourites and titles by other users, made
+// after the user's last_notified_at and up to the cutoff, on stories that
+// pass through a sentence the user wrote.
+export const digestCredits = async (
+  db: Db,
+  cutoff: Date,
+): Promise<DigestCredit[]> => {
+  const { rows } = await sql<DigestCredit>`
+    with recursive
+      since as (
+        select coalesce(min(last_notified_at), ${cutoff}) as at
+        from app.users where is_notifiable
+      ),
+      events as (
+        select 'like' as kind, l.user_id as actor, l.path_id, l.created_at
+        from app.likes l, since
+        where l.created_at <= ${cutoff} and l.created_at > since.at
+        union all
+        select 'title', t.author_id, t.path_id, t.created_at
+        from app.titles t, since
+        where t.created_at <= ${cutoff} and t.created_at > since.at
+      ),
+      up(kind, actor, story_path_id, created_at, path_id) as (
+        select kind, actor, path_id, created_at, path_id from events
+        union all
+        select up.kind, up.actor, up.story_path_id, up.created_at, p.parent_id
+        from up join app.paths p on p.id = up.path_id
+        where p.parent_id is not null
+      )
+    select distinct
+      u.id as "userId",
+      u.email,
+      up.kind,
+      a.name as "actorName",
+      up.story_path_id as "pathId"
+    from up
+    join app.paths p on p.id = up.path_id
+    join app.sentences s on s.id = p.sentence_id and s.deleted_at is null
+    join app.users u on u.id = s.author_id
+    join app.users a on a.id = up.actor
+    where u.is_notifiable
+      and up.actor <> u.id
+      and up.created_at > u.last_notified_at
+    order by "userId", up.kind, "pathId"
+  `.execute(db)
+  return rows
+}

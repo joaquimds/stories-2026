@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { favourites, setLike } from '../../src/server/data/likes.ts'
 import { linkSentence, myLinks } from '../../src/server/data/links.ts'
 import { recentSentences } from '../../src/server/data/recent.ts'
-import { digestEntries } from '../../src/server/data/rules.ts'
+import { digestCredits, digestEntries } from '../../src/server/data/rules.ts'
 import { deleteSentence, myFragments } from '../../src/server/data/sentences.ts'
 import { computeStats, countLoops } from '../../src/server/data/stats.ts'
 import { library, setTitle } from '../../src/server/data/titles.ts'
@@ -20,6 +20,8 @@ import {
 } from '../../src/server/auth/sessions.ts'
 import { enforceLimit } from '../../src/server/auth/rate-limit.ts'
 import { startBoss, stopBoss } from '../../src/server/jobs/boss.ts'
+import { sendDigests } from '../../src/server/jobs/notification-digest.ts'
+import { sql } from 'kysely'
 import { createUser, leafOf, rollback, writeChain } from './helpers.ts'
 
 describe('library', () => {
@@ -156,6 +158,53 @@ describe('digest recipients', () => {
         ['ana-digest', 'bob-digest', leafOf(c!), 'C'],
         ['bob-digest', 'ana-digest', leafOf(c!) + 1, 'D'],
       ])
+    }),
+  )
+})
+
+describe('digest credits', () => {
+  beforeAll(async () => {
+    await startBoss(process.env.DATABASE_URL as string)
+  })
+  afterAll(async () => {
+    await stopBoss()
+  })
+
+  it(
+    'credits writers when others favourite or title their stories',
+    rollback(async (trx) => {
+      const [ana, bob, cat] = [
+        await createUser(trx, 'ana-credit'),
+        await createUser(trx, 'bob-credit'),
+        await createUser(trx, 'cat-credit'),
+      ]
+      const past = new Date(Date.now() - 60_000)
+      await trx.updateTable('users').set({ last_notified_at: past }).execute()
+      const [, b] = await writeChain(trx, ana, null, 'A', 'B')
+      const [c] = await writeChain(trx, cat, b!, 'C')
+      await setLike(trx, ana, { story: b!, liked: true })
+      await setLike(trx, bob, { story: b!, liked: true })
+      await setTitle(trx, cat, { story: c!, title: 'Cats Title' })
+      const credits = await digestCredits(trx, new Date(Date.now() + 1000))
+      // Ana's own favourite isn't credited, and Cat's title credits Ana only
+      expect(
+        credits.map((c) => [c.email.split('@')[0], c.kind, c.actorName]),
+      ).toEqual([
+        ['ana-credit', 'like', 'bob-credit'],
+        ['ana-credit', 'title', 'cat-credit'],
+      ])
+
+      // One digest each for Ana (credits and Cat's sentence) and nobody else
+      await sendDigests(trx, new Date(Date.now() + 1000))
+      const { rows } = await sql<{
+        data: { to: string; subject: string; text: string }
+      }>`
+        select data from pgboss.job where name = 'send-email'
+      `.execute(trx)
+      expect(rows.map((r) => r.data.to)).toEqual(['ana-credit@example.com'])
+      expect(rows[0]?.data.subject).toBe('Your story was added to!')
+      expect(rows[0]?.data.text).toContain('bob-credit favourited:')
+      expect(rows[0]?.data.text).toContain('cat-credit titled:\n\n  Cats Title')
     }),
   )
 })

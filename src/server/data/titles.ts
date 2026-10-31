@@ -54,7 +54,13 @@ export const setTitle = async (
     .insertInto('titles')
     .values({ path_id: pathId, title, slug, author_id: viewer.id })
     .onConflict((oc) =>
-      oc.column('path_id').doUpdateSet({ title, slug, author_id: viewer.id }),
+      // A new title counts as new, for the digest
+      oc.column('path_id').doUpdateSet({
+        title,
+        slug,
+        author_id: viewer.id,
+        created_at: new Date(),
+      }),
     )
     .execute()
   return { slug }

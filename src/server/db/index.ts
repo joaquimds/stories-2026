@@ -27,3 +27,7 @@ export const destroyDb = async () => {
   await instance?.destroy()
   instance = undefined
 }
+
+// Runs `fn` in a transaction, joining the caller's if there is one
+export const inTransaction = <T>(db: Db, fn: (trx: Db) => Promise<T>) =>
+  db.isTransaction ? fn(db) : db.transaction().execute(fn)

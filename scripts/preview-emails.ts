@@ -19,9 +19,8 @@ const emails = {
     'The river was louder than she remembered.',
     '/s/4',
   ),
-  digest: digestEmail(
-    'ana@example.com',
-    new Map([
+  digest: digestEmail('ana@example.com', {
+    additions: new Map([
       [
         'Bob',
         [
@@ -37,7 +36,26 @@ const emails = {
         [{ content: 'The trees leaned in to listen.', path: '/s/The_Trees' }],
       ],
     ]),
-  ),
+    favourites: new Map([
+      ['Dan', [{ label: 'The Bridge', path: '/s/The_Bridge' }]],
+    ]),
+    titles: new Map([['Eve', [{ label: 'Waiting', path: '/s/Waiting' }]]]),
+  }),
+  'digest-credit': digestEmail('ana@example.com', {
+    additions: new Map(),
+    favourites: new Map([
+      [
+        'Dan',
+        [
+          {
+            label: 'At the clearing, he found her waiting.',
+            path: '/s/7',
+          },
+        ],
+      ],
+    ]),
+    titles: new Map(),
+  }),
 }
 
 for (const [name, email] of Object.entries(emails)) {

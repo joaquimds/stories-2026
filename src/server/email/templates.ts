@@ -190,36 +190,75 @@ export const reportEmail = (
 
 export type DigestSentence = { content: string; path: string }
 
-// The new sentences under each author's name, as cards that open them in
-// their stories
-export const digestEmail = (
-  to: string,
-  byAuthor: Map<string, DigestSentence[]>,
-): Email => {
-  const site = env().SITE_URL
-  const authors = [...byAuthor.keys()]
-  const intro = `${prettyJoin(authors)} added to your ${
-    [...byAuthor.values()].flat().length > 1 ? 'stories' : 'story'
-  }.`
-  const account = `${site}/account`
+// A story someone favourited or titled: its title, else its last sentence
+export type DigestStory = { label: string; path: string }
 
-  let text = `${intro}\n\n`
-  let body = heading('Your story was added to') + paragraph(escapeHtml(intro))
-  for (const [author, sentences] of byAuthor) {
-    text += `${author} wrote:\n\n`
-    body += paragraph(`<strong>${escapeHtml(author)}</strong> wrote:`)
-    for (const { content, path } of sentences) {
-      text += `  ${content}\n  ${site}${path}\n\n`
-      body += card(content, `${site}${path}`)
+export type Digest = {
+  // New sentences, under each author's name
+  additions: Map<string, DigestSentence[]>
+  // Stories with the reader's writing, under the name of whoever
+  // favourited or titled them
+  favourites: Map<string, DigestStory[]>
+  titles: Map<string, DigestStory[]>
+}
+
+const countOf = (byName: Map<string, unknown[]>) =>
+  [...byName.values()].flat().length
+
+const storiesWord = (count: number) => (count > 1 ? 'stories' : 'story')
+
+// What happened in the reader's stories since the last digest, each as a
+// card that opens it
+export const digestEmail = (to: string, digest: Digest): Email => {
+  const site = env().SITE_URL
+  const account = `${site}/account`
+  const { additions, favourites, titles } = digest
+
+  const summary = [
+    additions.size
+      ? `${prettyJoin([...additions.keys()])} added to your ${storiesWord(countOf(additions))}.`
+      : null,
+    favourites.size
+      ? `${prettyJoin([...favourites.keys()])} favourited your ${storiesWord(countOf(favourites))}.`
+      : null,
+    titles.size
+      ? `${prettyJoin([...titles.keys()])} titled your ${storiesWord(countOf(titles))}.`
+      : null,
+  ].filter((line): line is string => line !== null)
+
+  const [subject, title] = additions.size
+    ? ['Your story was added to!', 'Your story was added to']
+    : favourites.size
+      ? ['Your story was favourited!', 'Your story was favourited']
+      : ['Your story was given a title!', 'Your story was given a title']
+
+  let text = `${summary.join(' ')}\n\n`
+  let body = heading(title) + paragraph(escapeHtml(summary.join(' ')))
+  const section = <T>(
+    byName: Map<string, T[]>,
+    verb: string,
+    entry: (item: T) => { label: string; path: string },
+  ) => {
+    for (const [name, items] of byName) {
+      text += `${name} ${verb}:\n\n`
+      body += paragraph(`<strong>${escapeHtml(name)}</strong> ${verb}:`)
+      for (const item of items) {
+        const { label, path } = entry(item)
+        text += `  ${label}\n  ${site}${path}\n\n`
+        body += card(label, `${site}${path}`)
+      }
     }
   }
+  section(additions, 'wrote', ({ content, path }) => ({ label: content, path }))
+  section(favourites, 'favourited', (story) => story)
+  section(titles, 'titled', (story) => story)
   text += `You can turn off these emails on your account page: ${account}`
   return {
     to,
-    subject: 'Your story was added to!',
+    subject,
     text,
     html: layout({
-      preview: intro,
+      preview: summary.join(' '),
       body: body + button(site, 'Back to the beginning'),
       footer: `You can turn off these emails on your ${link(account, 'account page')}.<br>`,
     }),
