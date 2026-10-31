@@ -1,10 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import { toPageParams } from '../../domain/pagination.ts'
-import { listSearchSchema } from '../../domain/search.ts'
+import { listSearchSchema, recentSearchSchema } from '../../domain/search.ts'
 import { requireUser } from '../auth/request.ts'
 import { db } from '../db/index.ts'
 import { favourites } from '../data/likes.ts'
 import { myLinks } from '../data/links.ts'
+import { recentSentences } from '../data/recent.ts'
 import { myFragments } from '../data/sentences.ts'
 import { getStats } from '../data/stats.ts'
 import { library } from '../data/titles.ts'
@@ -49,3 +50,14 @@ export const getStatsPage = createServerFn({ method: 'GET' }).handler(
     return { ...stats, computedAt: computedAt.toISOString() }
   },
 )
+
+// Newest first; loose ends oldest first, to bring stalled stories back
+export const getRecent = createServerFn({ method: 'GET' })
+  .validator(recentSearchSchema)
+  .handler(({ data }) =>
+    recentSentences(
+      db(),
+      keysetParams(data, data.loose ? 'oldest' : 'newest'),
+      { looseEnds: data.loose },
+    ),
+  )

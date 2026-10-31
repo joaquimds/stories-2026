@@ -15,6 +15,7 @@ import { Route as FaqRouteImport } from './routes/faq'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RecentRouteImport } from './routes/recent'
 import { Route as ResetRouteImport } from './routes/reset'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as AccountIndexRouteImport } from './routes/account/index'
@@ -51,6 +52,11 @@ const LibraryRoute = LibraryRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecentRoute = RecentRouteImport.update({
+  id: '/recent',
+  path: '/recent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetRoute = ResetRouteImport.update({
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/health': typeof HealthRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/recent': typeof RecentRoute
   '/reset': typeof ResetRoute
   '/stats': typeof StatsRoute
   '/account/favourites': typeof AccountFavouritesRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/health': typeof HealthRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/recent': typeof RecentRoute
   '/reset': typeof ResetRoute
   '/stats': typeof StatsRoute
   '/account/favourites': typeof AccountFavouritesRoute
@@ -126,6 +134,7 @@ export interface FileRoutesById {
   '/health': typeof HealthRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/recent': typeof RecentRoute
   '/reset': typeof ResetRoute
   '/stats': typeof StatsRoute
   '/account/favourites': typeof AccountFavouritesRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/library'
     | '/login'
+    | '/recent'
     | '/reset'
     | '/stats'
     | '/account/favourites'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/library'
     | '/login'
+    | '/recent'
     | '/reset'
     | '/stats'
     | '/account/favourites'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/library'
     | '/login'
+    | '/recent'
     | '/reset'
     | '/stats'
     | '/account/favourites'
@@ -188,6 +200,7 @@ export interface RootRouteChildren {
   HealthRoute: typeof HealthRoute
   LibraryRoute: typeof LibraryRoute
   LoginRoute: typeof LoginRoute
+  RecentRoute: typeof RecentRoute
   ResetRoute: typeof ResetRoute
   StatsRoute: typeof StatsRoute
   SStoryRoute: typeof SStoryRoute
@@ -235,6 +248,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recent': {
+      id: '/recent'
+      path: '/recent'
+      fullPath: '/recent'
+      preLoaderRoute: typeof RecentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset': {
@@ -313,6 +333,7 @@ const rootRouteChildren: RootRouteChildren = {
   HealthRoute: HealthRoute,
   LibraryRoute: LibraryRoute,
   LoginRoute: LoginRoute,
+  RecentRoute: RecentRoute,
   ResetRoute: ResetRoute,
   StatsRoute: StatsRoute,
   SStoryRoute: SStoryRoute,

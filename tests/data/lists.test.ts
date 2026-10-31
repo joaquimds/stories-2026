@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { favourites, setLike } from '../../src/server/data/likes.ts'
 import { linkSentence, myLinks } from '../../src/server/data/links.ts'
+import { recentSentences } from '../../src/server/data/recent.ts'
 import { digestEntries } from '../../src/server/data/rules.ts'
 import { deleteSentence, myFragments } from '../../src/server/data/sentences.ts'
 import { computeStats, countLoops } from '../../src/server/data/stats.ts'
@@ -90,6 +91,39 @@ describe('account lists', () => {
         }),
       ])
       expect((await myLinks(trx, bob, { order: 'oldest' })).items).toEqual([])
+    }),
+  )
+})
+
+describe('recent', () => {
+  it(
+    'lists sentences site-wide, newest first, with what they follow',
+    rollback(async (trx) => {
+      const [ana, bob] = [
+        await createUser(trx, 'Ana-r'),
+        await createUser(trx, 'Bob-r'),
+      ]
+      const [, b] = await writeChain(trx, ana, null, 'A', 'B')
+      const [c] = await writeChain(trx, bob, b!, 'C')
+      await writeChain(trx, bob, null, 'Z')
+
+      const recent = await recentSentences(trx, { order: 'newest' })
+      expect(
+        recent.items.map((i) => [i.content, i.previous, i.authorName]),
+      ).toEqual([
+        ['Z', null, 'Bob-r'],
+        ['C', 'B', 'Bob-r'],
+        ['B', 'A', 'Ana-r'],
+        ['A', null, 'Ana-r'],
+      ])
+      expect(recent.items[1]?.permalink).toBe(`/s/${c}`)
+
+      const loose = await recentSentences(
+        trx,
+        { order: 'oldest' },
+        { looseEnds: true },
+      )
+      expect(loose.items.map((i) => i.content)).toEqual(['C', 'Z'])
     }),
   )
 })

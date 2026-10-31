@@ -33,3 +33,10 @@ export type StorySearch = z.infer<typeof storySearchSchema>
 export const listSearchSchema = pageSearchSchema.extend({ q: optionalSearch })
 
 export type ListSearch = z.infer<typeof listSearchSchema>
+
+export const recentSearchSchema = pageSearchSchema.extend({
+  // Only sentences that nothing follows yet
+  loose: z.boolean().optional().catch(undefined),
+})
+
+export type RecentSearch = z.infer<typeof recentSearchSchema>

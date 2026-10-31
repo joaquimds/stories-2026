@@ -102,3 +102,25 @@ test('links to the contact address', async ({ page }) => {
     page.getByRole('main').getByRole('link', { name: 'stories@joaqu.im' }),
   ).toBeVisible()
 })
+
+test('lists recent sentences and loose ends', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Recent' }).click()
+  await expect(page.getByRole('heading', { name: 'Recent' })).toBeVisible()
+  await expect(
+    page.getByRole('link', {
+      name: 'Every night, the lighthouse blinked a different message.',
+    }),
+  ).toBeVisible()
+  await page.getByRole('link', { name: 'Loose ends' }).click()
+  await expect(page).toHaveURL(/loose=true/)
+  // The garden has continuations, so it isn't a loose end
+  await expect(
+    page.getByRole('link', { name: 'In the garden, the paths forked.' }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('link', {
+      name: 'Except the youngest, who had never learned to read.',
+    }),
+  ).toBeVisible()
+})

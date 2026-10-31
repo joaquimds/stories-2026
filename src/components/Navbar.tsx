@@ -11,6 +11,7 @@ export const Navbar = ({ user }: { user: SessionUser | null }) => (
     </Link>
     <div className={styles.links}>
       <Link to="/faq">FAQ</Link>
+      <Link to="/recent">Recent</Link>
       <Link to="/library">Library</Link>
       {user ? (
         <Link to="/account">Account</Link>
