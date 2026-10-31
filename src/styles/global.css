@@ -207,3 +207,17 @@ input,
   white-space: nowrap;
   width: 1px;
 }
+
+/* Print only the page's content */
+
+@media print {
+  nav,
+  footer,
+  .pending-bar {
+    display: none;
+  }
+
+  .root {
+    height: auto;
+  }
+}

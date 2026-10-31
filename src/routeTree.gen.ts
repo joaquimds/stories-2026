@@ -23,6 +23,7 @@ import { Route as AccountIndexRouteImport } from './routes/account/index'
 import { Route as AccountFavouritesRouteImport } from './routes/account/favourites'
 import { Route as AccountFragmentsRouteImport } from './routes/account/fragments'
 import { Route as AccountLinksRouteImport } from './routes/account/links'
+import { Route as ReadStoryRouteImport } from './routes/read.$story'
 import { Route as SStoryRouteImport } from './routes/s.$story'
 
 const IndexRoute = IndexRouteImport.update({
@@ -95,6 +96,11 @@ const AccountLinksRoute = AccountLinksRouteImport.update({
   path: '/links',
   getParentRoute: () => AccountRoute,
 } as any)
+const ReadStoryRoute = ReadStoryRouteImport.update({
+  id: '/read/$story',
+  path: '/read/$story',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SStoryRoute = SStoryRouteImport.update({
   id: '/s/$story',
   path: '/s/$story',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/account/favourites': typeof AccountFavouritesRoute
   '/account/fragments': typeof AccountFragmentsRoute
   '/account/links': typeof AccountLinksRoute
+  '/read/$story': typeof ReadStoryRoute
   '/s/$story': typeof SStoryRoute
   '/account/': typeof AccountIndexRoute
 }
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/account/favourites': typeof AccountFavouritesRoute
   '/account/fragments': typeof AccountFragmentsRoute
   '/account/links': typeof AccountLinksRoute
+  '/read/$story': typeof ReadStoryRoute
   '/s/$story': typeof SStoryRoute
   '/account': typeof AccountIndexRoute
 }
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/account/favourites': typeof AccountFavouritesRoute
   '/account/fragments': typeof AccountFragmentsRoute
   '/account/links': typeof AccountLinksRoute
+  '/read/$story': typeof ReadStoryRoute
   '/s/$story': typeof SStoryRoute
   '/account/': typeof AccountIndexRoute
 }
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/account/favourites'
     | '/account/fragments'
     | '/account/links'
+    | '/read/$story'
     | '/s/$story'
     | '/account/'
   fileRoutesByTo: FileRoutesByTo
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/account/favourites'
     | '/account/fragments'
     | '/account/links'
+    | '/read/$story'
     | '/s/$story'
     | '/account'
   id:
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/account/favourites'
     | '/account/fragments'
     | '/account/links'
+    | '/read/$story'
     | '/s/$story'
     | '/account/'
   fileRoutesById: FileRoutesById
@@ -216,6 +228,7 @@ export interface RootRouteChildren {
   RecentRoute: typeof RecentRoute
   ResetRoute: typeof ResetRoute
   StatsRoute: typeof StatsRoute
+  ReadStoryRoute: typeof ReadStoryRoute
   SStoryRoute: typeof SStoryRoute
 }
 
@@ -319,6 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountLinksRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/read/$story': {
+      id: '/read/$story'
+      path: '/read/$story'
+      fullPath: '/read/$story'
+      preLoaderRoute: typeof ReadStoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/s/$story': {
       id: '/s/$story'
       path: '/s/$story'
@@ -357,6 +377,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecentRoute: RecentRoute,
   ResetRoute: ResetRoute,
   StatsRoute: StatsRoute,
+  ReadStoryRoute: ReadStoryRoute,
   SStoryRoute: SStoryRoute,
 }
 export const routeTree = rootRouteImport

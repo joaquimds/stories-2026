@@ -16,7 +16,7 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../lib/site.ts'
 import appCss from '../styles/global.css?url'
 
 // Routes whose pages scroll as a whole rather than within their content
-const SCROLLING = ['/login', '/reset', '/faq', '/stats']
+const SCROLLING = ['/login', '/reset', '/faq', '/stats', '/read/']
 
 export const Route = createRootRoute({
   beforeLoad: () => loadAppContext(),
@@ -70,7 +70,9 @@ function RootDocument({ children }: { children: ReactNode }) {
       </head>
       <body>
         <PendingBar />
-        <div className={`root ${SCROLLING.includes(pathname) ? 'scroll' : ''}`}>
+        <div
+          className={`root ${SCROLLING.some((path) => pathname.startsWith(path)) ? 'scroll' : ''}`}
+        >
           <Navbar user={user} />
           <main className="main">{children}</main>
           <Footer />

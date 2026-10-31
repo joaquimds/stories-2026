@@ -11,6 +11,7 @@ import {
   unlink,
 } from '../server/fns/stories.ts'
 import { ROOT_THREAD } from '../domain/thread.ts'
+import { Authors } from './Authors.tsx'
 import styles from './StoryText.module.css'
 
 type Props = { story: Story; user: SessionUser | null }
@@ -196,7 +197,7 @@ export const StoryText = ({ story, user }: Props) => {
           )}
         </div>
       ))}
-      <Authors lines={lines} />
+      <Authors authors={lines.map((l) => l.author)} />
       {reported ? (
         <p className={styles.reported}>reported</p>
       ) : titling ? (
@@ -317,28 +318,15 @@ export const StoryText = ({ story, user }: Props) => {
         >
           download
         </a>
+        <Link
+          to="/read/$story"
+          params={{ story: story.permalink.replace(/^\/s\//, '') }}
+          className={styles.read}
+        >
+          read as one piece
+        </Link>
       </div>
       {error ? <small className="error">{error}</small> : null}
     </>
   )
-}
-
-// "By X, Y and Z", most prolific first
-const Authors = ({ lines }: { lines: StoryLine[] }) => {
-  const counts = new Map<string, { count: number; first: number }>()
-  lines.forEach((line, i) => {
-    if (line.author) {
-      const entry = counts.get(line.author.name) ?? { count: 0, first: i }
-      entry.count++
-      counts.set(line.author.name, entry)
-    }
-  })
-  const names = [...counts.entries()]
-    .sort(([, a], [, b]) => b.count - a.count || a.first - b.first)
-    .map(([name]) => name)
-  if (!names.length) {
-    return null
-  }
-  const last = names.pop()
-  return <p>By {names.length ? `${names.join(', ')} and ${last}` : last}</p>
 }

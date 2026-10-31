@@ -75,3 +75,7 @@
   color: var(--color-red);
   margin-left: auto;
 }
+
+.read {
+  margin-left: var(--spacing-1);
+}

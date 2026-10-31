@@ -131,3 +131,15 @@ test('reads a random story', async ({ page }) => {
   await expect(page).toHaveURL(/\/s\//)
   await expect(page.locator('main').getByText(/^By /)).toBeVisible()
 })
+
+test('reads a story as one piece', async ({ page }) => {
+  await page.goto('/s/The_Bridge')
+  await page.getByRole('link', { name: 'read as one piece' }).click()
+  await expect(page).toHaveURL('/read/The_Bridge')
+  await expect(page.getByRole('heading', { name: 'The Bridge' })).toBeVisible()
+  await expect(page.locator('article')).toContainText(
+    'In the garden, the paths forked. She took the left path, towards the river.',
+  )
+  await page.getByRole('link', { name: '(back to the story)' }).click()
+  await expect(page).toHaveURL('/s/The_Bridge')
+})
