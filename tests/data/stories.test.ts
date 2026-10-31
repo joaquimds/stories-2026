@@ -185,6 +185,32 @@ describe('getStory', () => {
   )
 })
 
+describe('forks', () => {
+  it(
+    'lists the other ways the story could go at each sentence',
+    rollback(async (trx) => {
+      const ana = await createUser(trx)
+      const [a, b1] = await writeChain(trx, ana, null, 'A', 'B1')
+      const names = ['B2', 'B3', 'B4', 'B5', 'B6', 'B7']
+      for (const name of names) {
+        await writeChain(trx, ana, a!, name)
+      }
+      const [c] = await writeChain(trx, ana, b1!, 'C')
+      const story = await getStory(trx, null, (await resolveStory(trx, c!))!)
+      const [lineA, lineB, lineC] = story.lines
+      // Beginnings aren't forks, and nothing else follows B1
+      expect(lineA?.fork).toBeNull()
+      expect(lineC?.fork).toBeNull()
+      expect(lineB?.fork?.count).toBe(6)
+      expect(lineB?.fork?.options.map((o) => o.content)).toEqual(
+        names.slice(0, 5),
+      )
+      expect(lineB?.fork?.options[0]?.permalink).toMatch(/^\/s\/\d+$/)
+      expect(lineB?.fork?.allPermalink).toBe(`/s/${a}`)
+    }),
+  )
+})
+
 describe('getLinkCandidates', () => {
   it(
     'finds siblings, relatives and search matches',

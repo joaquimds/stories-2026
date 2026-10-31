@@ -143,3 +143,15 @@ test('reads a story as one piece', async ({ page }) => {
   await page.getByRole('link', { name: '(back to the story)' }).click()
   await expect(page).toHaveURL('/s/The_Bridge')
 })
+
+test('shows where a story could have gone another way', async ({ page }) => {
+  await page.goto('/s/The_Bridge')
+  await page.getByRole('button', { name: '1 other path here' }).click()
+  await page
+    .getByRole('link', { name: '→ He took the right path, into the trees.' })
+    .click()
+  await expect(
+    page.locator('main').getByText('He took the right path, into the trees.'),
+  ).toBeVisible()
+  await expect(page).toHaveURL(/\/s\/\d+$/)
+})

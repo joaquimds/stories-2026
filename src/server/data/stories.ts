@@ -15,6 +15,7 @@ import {
   searchPattern,
 } from './paging.ts'
 import {
+  type DefaultParents,
   type ResolvedStory,
   loadDefaultParents,
   permalink,
@@ -31,7 +32,19 @@ export type StoryLine = SentenceRow & {
   // Permalink of the story up to and including this sentence
   permalink: string
   editable: boolean
+  // Other ways the story could go at this point, if any
+  fork: Fork | null
 }
+
+export type Fork = {
+  count: number
+  // The first few alternatives, each opening that version of the story
+  options: { id: number; content: string; permalink: string }[]
+  // The story up to the previous sentence, where all of them are listed
+  allPermalink: string
+}
+
+const FORK_OPTIONS = 5
 
 export type Story = {
   thread: string
@@ -77,7 +90,10 @@ export const getStory = async (
   const ownSentenceIds = viewer
     ? sentenceIds.filter((id) => sentences.get(id)?.author?.id === viewer.id)
     : []
-  const editable = await editableSentences(db, ownSentenceIds)
+  const [editable, forks] = await Promise.all([
+    editableSentences(db, ownSentenceIds),
+    loadForks(db, sentenceIds, defaults),
+  ])
 
   const lines = sentenceIds.flatMap((id, i): StoryLine[] => {
     if (id === ROOT_ID) {
@@ -95,9 +111,18 @@ export const getStory = async (
           pathId ? titleByPath.get(pathId)?.slug : undefined,
         ),
         editable: editable.has(id),
+        fork: null,
       },
     ]
   })
+  // Each fork lists all alternatives on the story up to the line before
+  for (const [i, line] of lines.entries()) {
+    const fork = forks.get(line.index)
+    const previous = lines[i - 1]
+    if (fork && previous) {
+      line.fork = { ...fork, allPermalink: previous.permalink }
+    }
+  }
 
   const isRoot = sentenceIds.at(-1) === ROOT_ID
   const leaf = isRoot ? undefined : lines.at(-1)
@@ -113,6 +138,69 @@ export const getStory = async (
     canUnlink: viewer ? await canUnlink(db, viewer, resolved) : false,
     isLeafAuthor: Boolean(viewer && leaf?.author?.id === viewer.id),
   }
+}
+
+// For each position after the first sentence, the other live sentences
+// that follow the sentence before it. The first sentence has none: its
+// alternatives would be every other beginning.
+const loadForks = async (
+  db: Db,
+  sentenceIds: number[],
+  defaults: DefaultParents,
+): Promise<Map<number, Omit<Fork, 'allPermalink'>>> => {
+  const positions = sentenceIds
+    .map((id, index) => ({ id, index, parent: sentenceIds[index - 1] }))
+    .filter(
+      (p): p is { id: number; index: number; parent: number } =>
+        p.index >= 2 && p.parent !== undefined,
+    )
+  const forks = new Map<number, Omit<Fork, 'allPermalink'>>()
+  if (!positions.length) {
+    return forks
+  }
+  const rows = await db
+    .selectFrom('links as l')
+    .innerJoin('sentences as c', 'c.id', 'l.to_sentence_id')
+    .select(['l.from_sentence_id as parent', 'c.id', 'c.content'])
+    .where(
+      'l.from_sentence_id',
+      'in',
+      positions.map((p) => p.parent),
+    )
+    .where('c.deleted_at', 'is', null)
+    .orderBy('c.id')
+    .execute()
+  const childrenOf = new Map<number, { id: number; content: string }[]>()
+  for (const row of rows) {
+    childrenOf.set(row.parent, [...(childrenOf.get(row.parent) ?? []), row])
+  }
+  const shown = new Map<number, { id: number; content: string }[]>()
+  for (const { id, index, parent } of positions) {
+    const others = (childrenOf.get(parent) ?? []).filter((c) => c.id !== id)
+    if (others.length) {
+      shown.set(index, others)
+    }
+  }
+  const optionIds = [...shown.values()].flatMap((others) =>
+    others.slice(0, FORK_OPTIONS).map((c) => c.id),
+  )
+  const allDefaults = new Map([
+    ...defaults,
+    ...(await loadDefaultParents(db, optionIds)),
+  ])
+  for (const [index, others] of shown) {
+    forks.set(index, {
+      count: others.length,
+      options: others.slice(0, FORK_OPTIONS).map((c) => ({
+        id: c.id,
+        content: c.content,
+        permalink: permalink(
+          threadOf([...sentenceIds.slice(0, index), c.id], allDefaults),
+        ),
+      })),
+    })
+  }
+  return forks
 }
 
 // The step into the leaf, if it is not the default parent

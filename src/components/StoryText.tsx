@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import type { SessionUser } from '../server/auth/sessions.ts'
-import type { Story, StoryLine } from '../server/data/stories.ts'
+import type { Fork, Story, StoryLine } from '../server/data/stories.ts'
 import {
   edit,
   like,
@@ -22,6 +22,7 @@ export const StoryText = ({ story, user }: Props) => {
   const router = useRouter()
   const navigate = useNavigate()
   const [focus, setFocus] = useState<number | null>(null)
+  const [openFork, setOpenFork] = useState<number | null>(null)
   const [editing, setEditing] = useState<Editing | null>(null)
   const [titling, setTitling] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -34,6 +35,7 @@ export const StoryText = ({ story, user }: Props) => {
   if (thread !== story.thread) {
     setThread(story.thread)
     setFocus(null)
+    setOpenFork(null)
     setEditing(null)
     setTitling(false)
     setReported(false)
@@ -195,6 +197,15 @@ export const StoryText = ({ story, user }: Props) => {
               ) : null}
             </>
           )}
+          {line.fork ? (
+            <ForkMark
+              fork={line.fork}
+              open={openFork === line.index}
+              onToggle={() =>
+                setOpenFork(openFork === line.index ? null : line.index)
+              }
+            />
+          ) : null}
         </div>
       ))}
       <Authors authors={lines.map((l) => l.author)} />
@@ -327,6 +338,58 @@ export const StoryText = ({ story, user }: Props) => {
         </Link>
       </div>
       {error ? <small className="error">{error}</small> : null}
+    </>
+  )
+}
+
+// A path icon in the margin where the story could have gone another way,
+// which lists the alternatives
+const ForkMark = ({
+  fork,
+  open,
+  onToggle,
+}: {
+  fork: Fork
+  open: boolean
+  onToggle: () => void
+}) => {
+  const label = `${fork.count} other ${fork.count === 1 ? 'path' : 'paths'} here`
+  return (
+    <>
+      <button
+        type="button"
+        className={`${styles.fork} ${open ? styles['fork-open'] : ''}`}
+        aria-label={label}
+        aria-expanded={open}
+        title={label}
+        onClick={onToggle}
+      >
+        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+          <path
+            d="M8 15V9M8 9 3.5 3M8 9l4.5-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+          <circle cx="3.5" cy="2.5" r="1.6" fill="currentColor" />
+          <circle cx="12.5" cy="2.5" r="1.6" fill="currentColor" />
+        </svg>
+      </button>
+      {open ? (
+        <ul className={styles.alternatives}>
+          {fork.options.map((option) => (
+            <li key={option.id}>
+              <Link to={option.permalink}>→ {option.content}</Link>
+            </li>
+          ))}
+          {fork.count > fork.options.length ? (
+            <li>
+              <Link to={fork.allPermalink}>(all {fork.count})</Link>
+            </li>
+          ) : null}
+        </ul>
+      ) : null}
     </>
   )
 }
