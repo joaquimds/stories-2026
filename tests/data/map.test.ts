@@ -3,6 +3,7 @@ import { setLike } from '../../src/server/data/likes.ts'
 import { linkSentence } from '../../src/server/data/links.ts'
 import { getStoryMap } from '../../src/server/data/map.ts'
 import { resolveStory } from '../../src/server/data/paths.ts'
+import { getChildren } from '../../src/server/data/stories.ts'
 import { createUser, leafOf, rollback, writeChain } from './helpers.ts'
 
 const limits = { trunk: 3, ahead: 2, aside: 1, children: 2, nodes: 50 }
@@ -65,6 +66,42 @@ describe('getStoryMap', () => {
       // Liked by three people in all, Quiet by two, Old by one; two shown
       expect(children.map((n) => n.content)).toEqual(['Liked', 'Quiet'])
       expect(first.more).toBe(1)
+    }),
+  )
+
+  it(
+    'ranks continuations exactly as the story page does',
+    rollback(async (trx) => {
+      const [ana, bob, cat, dan] = [
+        await createUser(trx),
+        await createUser(trx),
+        await createUser(trx),
+        await createUser(trx),
+      ]
+      const [a] = await writeChain(trx, ana, null, 'A')
+      const [here] = await writeChain(trx, ana, a!, 'Popular here')
+      const [elsewhere] = await writeChain(trx, ana, a!, 'Popular elsewhere')
+      await writeChain(trx, ana, a!, 'Unread')
+      // One like on this route...
+      await setLike(trx, bob, { story: here!, liked: true })
+      // ...against two likes on another route through the other sentence
+      const [z] = await writeChain(trx, cat, null, 'Z')
+      const { thread } = await linkSentence(trx, cat, {
+        story: z!,
+        sentenceId: leafOf(elsewhere!),
+      })
+      await setLike(trx, cat, { story: thread, liked: true })
+      await setLike(trx, dan, { story: thread, liked: true })
+
+      const story = (await resolveStory(trx, a!))!
+      const page = await getChildren(trx, story, { order: 'popular' })
+      const nodes = await getStoryMap(trx, story, { ...limits, children: 8 })
+      const first = nodes.find((n) => n.content === 'A')!
+      const onMap = nodes
+        .filter((n) => n.parent === first.key)
+        .map((n) => n.content)
+      expect(onMap).toEqual(page.page.items.map((i) => i.content))
+      expect(onMap).toEqual(['Popular here', 'Popular elsewhere', 'Unread'])
     }),
   )
 

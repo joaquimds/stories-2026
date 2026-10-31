@@ -28,7 +28,8 @@ decided against.
   time: sentences are pulled out from the centre by depth, held to their
   continuations by springs, pushed apart and kept from overlapping. The
   story is dark and the reader's position ringed. Where a sentence has more
-  continuations than fit, the most popular are shown. Pointing at a sentence
+  continuations than fit, the most popular are shown, ranked exactly as on
+  the story page. Pointing at a sentence
   (or a first tap on touch screens) shows it in full in a popover, which
   opens it when clicked. Drag to pan, scroll or buttons to zoom. How to read it is in
   the FAQ rather than on the page.

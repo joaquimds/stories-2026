@@ -1,5 +1,5 @@
 // Derived rules over the contributions view (plan §5)
-import { sql } from 'kysely'
+import { type RawBuilder, sql } from 'kysely'
 import type { Db } from '../db/index.ts'
 
 // Sentences that nobody other than their author has a write, like or title
@@ -178,27 +178,39 @@ export const digestCredits = async (
   return rows
 }
 
-// How popular each sentence is, wherever it is read: the distinct writers
-// and likers at or below any path ending at it
-export const sentencePopularity = async (
-  db: Db,
-  sentenceIds: number[],
-): Promise<Map<number, number>> => {
-  if (!sentenceIds.length) {
-    return new Map()
-  }
-  const { rows } = await sql<{ sentence_id: number; score: number }>`
-    with recursive sub(sentence_id, path_id) as (
-      select p.sentence_id, p.id from app.paths p
-      where p.sentence_id = any(${sentenceIds}::bigint[])
-      union all
-      select sub.sentence_id, p.id from sub join app.paths p on p.parent_id = sub.path_id
-    )
-    select sub.sentence_id, count(distinct c.user_id)::int as score
+// The Popular order for continuations, used wherever continuations are
+// ranked: the story page and the map. `candidates` selects rows of
+// (grp, parent_path, sentence_id): a continuation `sentence_id` of the
+// route whose path is `parent_path` (null if no one has used that route
+// yet), with `grp` telling separate routes apart. Ranks by
+//   1. distinct writers and likers below this continuation of this route,
+//   2. distinct writers and likers below the sentence on any route,
+//   3. the oldest sentence.
+// Adds CTEs `cand` and `scores` to a `with recursive` clause; join the
+// scores with `using (grp, sentence_id)` and order by `popularOrder`.
+export const popularityScores = (candidates: RawBuilder<unknown>) => sql`
+  cand as (${candidates}),
+  sub(grp, sentence_id, here, path_id) as (
+    select c.grp, c.sentence_id,
+      coalesce(p.parent_id = c.parent_path, false), p.id
+    from cand c join app.paths p on p.sentence_id = c.sentence_id
+    union all
+    select sub.grp, sub.sentence_id, sub.here, p.id
+    from sub join app.paths p on p.parent_id = sub.path_id
+  ),
+  scores as (
+    select sub.grp, sub.sentence_id,
+      count(distinct c.user_id) filter (where sub.here) as here_score,
+      count(distinct c.user_id) as score
     from sub
     join app.contributions c on c.path_id = sub.path_id
     where c.kind in ('write', 'like')
-    group by sub.sentence_id
-  `.execute(db)
-  return new Map(rows.map((r) => [r.sentence_id, r.score]))
-}
+    group by sub.grp, sub.sentence_id
+  )
+`
+
+export const popularOrder = sql`
+  coalesce(scores.here_score, 0) desc,
+  coalesce(scores.score, 0) desc,
+  cand.sentence_id
+`

@@ -2,7 +2,7 @@ import { sql } from 'kysely'
 import { ROOT_ID, permalink } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
 import { type ResolvedStory, loadDefaultParents, threadOf } from './paths.ts'
-import { sentencePopularity } from './rules.ts'
+import { popularOrder, popularityScores } from './rules.ts'
 
 // How much of the tree around a story to show
 export const MAP_LIMITS = {
@@ -37,6 +37,8 @@ type Pending = {
   node: MapNode
   // Sentence ids from the map's first node to this one
   ids: number[]
+  // The path for this route, if anyone has used it
+  pathId: number | null
   // Levels left to expand below this node
   budget: number
 }
@@ -96,41 +98,49 @@ export const getStoryMap = async (
     {
       node: rootNode,
       ids: [first],
+      pathId: story.pathIds[start] ?? null,
       budget: trunk.length === 1 ? limits.ahead : Number.POSITIVE_INFINITY,
     },
   ]
 
   while (frontier.length && nodes.length < limits.nodes) {
-    const parents = [...new Set(frontier.map((p) => p.ids.at(-1) as number))]
-    const { rows } = await sql<{ parent: number; id: number }>`
-      select l.from_sentence_id as parent, c.id
-      from app.links l
-      join app.sentences c on c.id = l.to_sentence_id
-      where l.from_sentence_id = any(${parents}::bigint[])
-        and c.deleted_at is null
-      order by c.id
+    // Each frontier route's continuations, in the Popular order, with the
+    // path each continuation would make if anyone has used it
+    const { rows } = await sql<{
+      grp: number
+      sentence_id: number
+      path_id: number | null
+    }>`
+      with recursive ${popularityScores(sql`
+        select f.grp, f.parent_path, l.to_sentence_id as sentence_id
+        from unnest(
+          ${frontier.map((_, i) => i)}::int[],
+          ${frontier.map((p) => p.ids.at(-1) as number)}::bigint[],
+          ${frontier.map((p) => p.pathId)}::bigint[]
+        ) as f(grp, sentence, parent_path)
+        join app.links l on l.from_sentence_id = f.sentence
+        join app.sentences s on s.id = l.to_sentence_id
+        where s.deleted_at is null
+      `)}
+      select cand.grp, cand.sentence_id, step.id as path_id
+      from cand
+      left join scores using (grp, sentence_id)
+      left join app.paths step
+        on step.parent_id = cand.parent_path
+        and step.sentence_id = cand.sentence_id
+      order by cand.grp, ${popularOrder}
     `.execute(db)
-    const childrenOf = new Map<number, number[]>()
+    const continuations = frontier.map(
+      () => [] as { id: number; pathId: number | null }[],
+    )
     for (const row of rows) {
-      childrenOf.set(row.parent, [
-        ...(childrenOf.get(row.parent) ?? []),
-        row.id,
-      ])
+      continuations[row.grp]?.push({ id: row.sentence_id, pathId: row.path_id })
     }
-    const [texts, popularity] = await Promise.all([
-      content(rows.map((r) => r.id)),
-      sentencePopularity(db, [...new Set(rows.map((r) => r.id))]),
-    ])
-    // Most popular first, then oldest, as on the story page
-    for (const children of childrenOf.values()) {
-      children.sort(
-        (a, b) => (popularity.get(b) ?? 0) - (popularity.get(a) ?? 0) || a - b,
-      )
-    }
+    const texts = await content(rows.map((r) => r.sentence_id))
 
     const next: Pending[] = []
-    for (const { node, ids, budget } of frontier) {
-      const children = childrenOf.get(ids.at(-1) as number) ?? []
+    for (const [index, { node, ids, budget }] of frontier.entries()) {
+      const children = continuations[index] ?? []
       if (budget <= 0 || node.loop) {
         node.more = children.length
         continue
@@ -140,10 +150,13 @@ export const getStoryMap = async (
       const ordered =
         trunkNext === undefined
           ? children
-          : [trunkNext, ...children.filter((id) => id !== trunkNext)]
+          : [
+              ...children.filter((c) => c.id === trunkNext),
+              ...children.filter((c) => c.id !== trunkNext),
+            ]
       const shown = ordered.slice(0, limits.children)
       node.more = children.length - shown.length
-      for (const [i, id] of shown.entries()) {
+      for (const [i, { id, pathId }] of shown.entries()) {
         if (nodes.length >= limits.nodes) {
           node.more += shown.length - i
           break
@@ -168,6 +181,7 @@ export const getStoryMap = async (
         next.push({
           node: child,
           ids: childIds,
+          pathId,
           // The story itself is shown in full; the current sentence's
           // continuations `ahead` levels deep; branches leaving the story
           // `aside` levels deep

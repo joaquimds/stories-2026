@@ -21,7 +21,12 @@ import {
   permalink,
   threadOf,
 } from './paths.ts'
-import { editableSentences, isStepProtected } from './rules.ts'
+import {
+  editableSentences,
+  isStepProtected,
+  popularOrder,
+  popularityScores,
+} from './rules.ts'
 import { type SentenceRow, loadSentences } from './sentences.ts'
 
 export type Viewer = { id: number; name: string } | null
@@ -263,28 +268,13 @@ export const getChildren = async (
   let page: Page<Candidate>
   if (params.order === 'popular') {
     const { rows } = await sql<Candidate>`
-      with recursive
-        cand as (${candidates}),
-        sub(sentence_id, here, path_id) as (
-          select c.sentence_id, coalesce(p.parent_id = ${leafPathId}::bigint, false), p.id
-          from cand c join app.paths p on p.sentence_id = c.sentence_id
-          union all
-          select sub.sentence_id, sub.here, p.id
-          from sub join app.paths p on p.parent_id = sub.path_id
-        ),
-        scores as (
-          select sub.sentence_id,
-            count(distinct c.user_id) filter (where sub.here) as here_score,
-            count(distinct c.user_id) as score
-          from sub
-          join app.contributions c on c.path_id = sub.path_id
-          where c.kind in ('write', 'like')
-          group by sub.sentence_id
-        )
+      with recursive ${popularityScores(
+        sql`select 0 as grp, ${leafPathId}::bigint as parent_path, sentence_id
+          from (${candidates}) c`,
+      )}
       select cand.sentence_id
-      from cand left join scores using (sentence_id)
-      order by coalesce(here_score, 0) desc, coalesce(score, 0) desc,
-        cand.sentence_id
+      from cand left join scores using (grp, sentence_id)
+      order by ${popularOrder}
       limit ${PAGE_SIZE + 1} offset ${popularOffset(params.page)}
     `.execute(db)
     page = popularPage(rows, params.page ?? 1)
