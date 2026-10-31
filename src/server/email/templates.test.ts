@@ -41,6 +41,9 @@ describe('email templates', () => {
       email.html.match(/href="http:\/\/localhost:3000\/s\/\d"/g),
     ).toHaveLength(3)
     expect(email.html).toContain('href="http://localhost:3000/account"')
+    expect(email.html).toMatch(
+      /href="http:\/\/localhost:3000" [^>]*>Back to the beginning</,
+    )
   })
 
   it('shows the reported sentence', () => {

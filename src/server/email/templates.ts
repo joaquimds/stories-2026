@@ -220,7 +220,7 @@ export const digestEmail = (
     text,
     html: layout({
       preview: intro,
-      body: body + button(site, 'Keep reading'),
+      body: body + button(site, 'Back to the beginning'),
       footer: `You can turn off these emails on your ${link(account, 'account page')}.<br>`,
     }),
   }
