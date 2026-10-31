@@ -4,8 +4,6 @@ _A garden of forking paths._ Collaborative, non-linear fiction: people write
 sentences that continue other sentences, and link sentences into other
 stories, forming a graph. A story is a path through that graph.
 
-See [docs/plan.md](docs/plan.md) for the design.
-
 ## Development
 
 Requires Node 26 (`.nvmrc`), pnpm 10 and Postgres 15+.
@@ -107,14 +105,15 @@ pg-boss with its workers and the daily 18:00 Europe/London digest schedule,
 then serves HTTP. `SIGTERM` stops accepting requests, lets running jobs
 finish, and closes the pool.
 
-## Decisions made while building
+## Design decisions
 
-Where the plan left room, or where building it surfaced something:
+Choices that aren't obvious from the code, mostly made while rebuilding the
+2020 app:
 
 - **TypeScript 6.0**, not 7: typescript-eslint does not support 7 yet.
-- **The root sentence `0` is kept**, unlike the plan says. It is the parent
-  of every beginning (each beginning is written under its path and linked
-  from it), and the home page is its story, so the home page needs no
+- **The root sentence `0`** is the parent of every beginning (each
+  beginning is written under its path and linked from it), and the home
+  page is its story, so the home page needs no
   special case. Deleting a beginning that has continuations relinks them
   from the root, the link browser treats beginnings as siblings, and an
   existing sentence can be linked in as a new beginning. A check constraint
