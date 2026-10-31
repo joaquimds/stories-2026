@@ -54,9 +54,10 @@ test('shows titled stories by slug, through links and loops', async ({
     .click()
   await expect(page).toHaveURL(/\/s\/\d+\.\d+-\d+$/)
   // ...and the clearing loops back to the garden
+  // (from the list of continuations, once the clearing's page has loaded)
   await page
+    .locator('main ul li')
     .getByRole('link', { name: 'In the garden, the paths forked.' })
-    .last()
     .click()
   await expect(
     page.locator('main').getByText('In the garden, the paths forked.'),

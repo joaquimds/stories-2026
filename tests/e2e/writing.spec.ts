@@ -36,7 +36,7 @@ test('writes a new story and continues it', async ({ page }) => {
   await expect(page.locator('main ul li').first()).toHaveText(first)
 })
 
-test('edits in place and as a new branch', async ({ page }) => {
+test('edits in place and writes a variation', async ({ page }) => {
   const first = unique('A first line')
   const second = unique('A second line')
   await page.goto('/')
@@ -57,11 +57,9 @@ test('edits in place and as a new branch', async ({ page }) => {
 
   const branch = unique('A different first line')
   await main(page).getByRole('button', { name: first }).click()
-  await main(page)
-    .getByRole('button', { name: 'write alternative branch' })
-    .click()
+  await main(page).getByRole('button', { name: 'write a variation' }).click()
   await main(page).getByRole('textbox', { name: 'Sentence' }).fill(branch)
-  await main(page).getByRole('button', { name: 'save new branch' }).click()
+  await main(page).getByRole('button', { name: 'save variation' }).click()
   await expect(main(page).getByRole('button', { name: branch })).toBeVisible()
   await expect(
     main(page).getByRole('button', { name: `${second}, edited` }),

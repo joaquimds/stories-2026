@@ -119,6 +119,12 @@ export const StoryText = ({ story, user }: Props) => {
                   setEditing({ ...editing, content: e.target.value })
                 }
               />
+              {editing.branch ? (
+                <p className={styles.hint}>
+                  Your variation becomes a new branch here, and the rest of the
+                  story follows it. The original stays as it is.
+                </p>
+              ) : null}
               <div>
                 <button
                   className={`${styles['edit-save']} link`}
@@ -128,7 +134,7 @@ export const StoryText = ({ story, user }: Props) => {
                     editing.content === line.content
                   }
                 >
-                  {editing.branch ? 'save new branch' : 'save'}
+                  {editing.branch ? 'save variation' : 'save'}
                 </button>
                 <button
                   type="button"
@@ -181,7 +187,7 @@ export const StoryText = ({ story, user }: Props) => {
                       disabled={busy}
                       onClick={() => startEditing(line, true)}
                     >
-                      write alternative branch
+                      write a variation
                     </button>
                   ) : null}
                 </div>

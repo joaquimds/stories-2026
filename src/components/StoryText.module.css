@@ -29,11 +29,18 @@
 
 .editing {
   textarea {
+    font-family: var(--font-family);
     font-size: var(--font-size-2);
     height: 5rem;
     padding: var(--spacing-0);
     width: 100%;
   }
+}
+
+.hint {
+  color: var(--color-grey-dark);
+  font-size: var(--font-size-0);
+  margin-bottom: var(--spacing-0);
 }
 
 .edit-save {
