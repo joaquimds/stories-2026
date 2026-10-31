@@ -91,3 +91,14 @@ test('redirects the root thread to the home page', async ({ page }) => {
   await page.goto('/s/0')
   await expect(page).toHaveURL('/')
 })
+
+test('links to the contact address', async ({ page }) => {
+  await page.goto('/faq')
+  await expect(page.getByRole('link', { name: 'Contact' })).toHaveAttribute(
+    'href',
+    'mailto:stories@joaqu.im',
+  )
+  await expect(
+    page.getByRole('main').getByRole('link', { name: 'stories@joaqu.im' }),
+  ).toBeVisible()
+})

@@ -83,9 +83,9 @@ given how the app is built now.
   UK and EU data rules. Would need a decision on sentences other people have
   built on, probably the same "[deleted]" masking. _Medium._
 
-  Meanwhile, **the site should direct people to email
-  [stories@joaqu.im](mailto:stories@joaqu.im)** for queries and deletion
-  requests (for example in the FAQ and the footer). _Small._
+  Meanwhile, the site directs people to email
+  [stories@joaqu.im](mailto:stories@joaqu.im) for queries and deletion
+  requests, from the footer's Contact link and an FAQ entry.
 
 ## Decided against
 

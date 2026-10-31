@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { CONTACT_EMAIL } from '../lib/site.ts'
 import styles from './Footer.module.css'
 
 export const Footer = () => (
@@ -13,6 +14,9 @@ export const Footer = () => (
         @joaquimds
       </a>
     </p>
-    <Link to="/stats">Stats</Link>
+    <p className={styles.links}>
+      <a href={`mailto:${CONTACT_EMAIL}`}>Contact</a>
+      <Link to="/stats">Stats</Link>
+    </p>
   </footer>
 )

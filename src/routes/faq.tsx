@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { SITE_TITLE } from '../lib/site.ts'
+import { CONTACT_EMAIL, SITE_TITLE } from '../lib/site.ts'
 import styles from './faq.module.css'
 
 export const Route = createFileRoute('/faq')({
@@ -156,6 +156,15 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
           <Link to="/account/links">here</Link>.
         </p>
       </>
+    ),
+  },
+  {
+    question: 'How do I get in touch, or delete my account?',
+    answer: (
+      <p>
+        Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> with any
+        questions, or to ask for your account and fragments to be deleted.
+      </p>
     ),
   },
 ]
