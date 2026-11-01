@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
+import { present } from '../../domain/present.ts'
 import { fontMetrics, parseWoff, toSfnt } from './woff.ts'
 
 const require = createRequire(import.meta.url)
@@ -20,7 +21,7 @@ describe('fontMetrics', () => {
   ])('reads the width of %j', (char, width) => {
     const metrics = fontMetrics(font)
     expect(metrics.unitsPerEm).toBe(1000)
-    expect(metrics.advance(char.codePointAt(0)!)).toBe(width)
+    expect(metrics.advance(present(char.codePointAt(0)))).toBe(width)
   })
 
   it('uses the placeholder glyph for characters the font lacks', () => {

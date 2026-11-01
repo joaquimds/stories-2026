@@ -30,22 +30,19 @@ if (existing) {
 
 // Every seeded account has the password "password"
 const passwordHash = await hashPassword('password')
-const users = await db
-  .insertInto('users')
-  .values(
-    ['Ana', 'Bob', 'Cat'].map((name) => ({
+const createUser = (name: string) =>
+  db
+    .insertInto('users')
+    .values({
       name,
       email: `${name.toLowerCase()}@example.com`,
       password_hash: passwordHash,
-    })),
-  )
-  .returning(['id', 'name'])
-  .execute()
-const [ana, bob, cat] = users as [
-  (typeof users)[0],
-  (typeof users)[0],
-  (typeof users)[0],
-]
+    })
+    .returning(['id', 'name'])
+    .executeTakeFirstOrThrow()
+const ana = await createUser('Ana')
+const bob = await createUser('Bob')
+const cat = await createUser('Cat')
 
 await db.transaction().execute(async (trx) => {
   const write = async (author: typeof ana, story: string, content: string) =>
@@ -128,5 +125,5 @@ await db.transaction().execute(async (trx) => {
   await setLike(trx, bob, { story: crossing.thread, liked: true })
 })
 
-console.info(`Seeded ${users.length} users`)
+console.info('Seeded 3 users and their stories')
 await db.destroy()

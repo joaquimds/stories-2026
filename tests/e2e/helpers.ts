@@ -20,11 +20,14 @@ export const login = async (page: Page, email: string, password = PASSWORD) => {
   await expect(page.getByRole('link', { name: 'Account' })).toBeVisible()
 }
 
-export const query = async <T>(text: string, values: unknown[] = []) => {
+export const query = async <T extends pg.QueryResultRow>(
+  text: string,
+  values: unknown[] = [],
+) => {
   const client = new pg.Client({ connectionString: E2E_DATABASE_URL })
   await client.connect()
   try {
-    return (await client.query(text, values)).rows as T[]
+    return (await client.query<T>(text, values)).rows
   } finally {
     await client.end()
   }

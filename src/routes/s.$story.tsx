@@ -20,7 +20,7 @@ export const Route = createFileRoute('/s/$story')({
     if (!story) {
       return {}
     }
-    const siteUrl = (match.context as { siteUrl?: string }).siteUrl ?? ''
+    const { siteUrl } = match.context
     const title = story.title ? `${story.title} | ${SITE_TITLE}` : SITE_TITLE
     const description =
       story.lines.find((l) => !l.deleted)?.content ?? SITE_DESCRIPTION

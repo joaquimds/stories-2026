@@ -9,15 +9,16 @@ type Props = {
 }
 
 export const Pager = ({ page, toSearch }: Props) => {
-  if (!page.prev && !page.next && !page.truncated) {
+  const { prev: before, next: after } = page
+  if (!before && !after && !page.truncated) {
     return null
   }
   return (
     <div className={styles.pager}>
-      {page.prev ? (
+      {before ? (
         <Link
           to="."
-          search={(prev: object) => ({ ...prev, ...toSearch(page.prev!) })}
+          search={(prev: object) => ({ ...prev, ...toSearch(before) })}
           rel="prev"
         >
           (previous)
@@ -25,10 +26,10 @@ export const Pager = ({ page, toSearch }: Props) => {
       ) : (
         <span />
       )}
-      {page.next ? (
+      {after ? (
         <Link
           to="."
-          search={(prev: object) => ({ ...prev, ...toSearch(page.next!) })}
+          search={(prev: object) => ({ ...prev, ...toSearch(after) })}
           rel="next"
         >
           (next)

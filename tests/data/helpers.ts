@@ -1,10 +1,12 @@
 import { afterAll } from 'vitest'
+import { present } from '../../src/domain/present.ts'
 import { ROOT_THREAD } from '../../src/domain/thread.ts'
 import { type Db, createDb } from '../../src/server/db/index.ts'
 import type { Author } from '../../src/server/data/sentences.ts'
 import { writeSentence } from '../../src/server/data/sentences.ts'
+import { resolveStory } from '../../src/server/data/paths.ts'
 
-const testDb = createDb(process.env.DATABASE_URL as string, 2)
+const testDb = createDb(present(process.env.DATABASE_URL), 2)
 
 afterAll(async () => {
   await testDb.destroy()
@@ -41,19 +43,25 @@ export const createUser = async (
 }
 
 // Writes a chain of sentences, returning the thread after each one
-export const writeChain = async (
+// The thread after each fragment, one per content given
+export const writeChain = async <const C extends string[]>(
   trx: Db,
   author: Author,
   story: string | null,
-  ...contents: string[]
-) => {
+  ...contents: C
+): Promise<{ [K in keyof C]: string }> => {
   const threads: string[] = []
   let current = story ?? ROOT_THREAD
   for (const content of contents) {
     current = (await writeSentence(trx, author, current, content)).thread
     threads.push(current)
   }
-  return threads
+  // One per content, which TypeScript can't follow through the loop
+  return threads as { [K in keyof C]: string }
 }
+
+// The story at a thread, which the test expects to exist
+export const resolved = async (trx: Db, thread: string) =>
+  present(await resolveStory(trx, thread))
 
 export const leafOf = (thread: string) => Number(thread.split('.')[0])

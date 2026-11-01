@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { present } from '../../src/domain/present.ts'
 import { favourites, setLike } from '../../src/server/data/likes.ts'
 import { linkSentence, myLinks } from '../../src/server/data/links.ts'
 import { recentSentences } from '../../src/server/data/recent.ts'
@@ -32,9 +33,9 @@ describe('library', () => {
       const [ana, bob] = [await createUser(trx), await createUser(trx)]
       const [, b] = await writeChain(trx, ana, null, 'Once', 'upon')
       const [z] = await writeChain(trx, ana, null, 'Zed')
-      await setTitle(trx, ana, { story: b!, title: 'Upon a time' })
-      await setTitle(trx, ana, { story: z!, title: 'Zed’s dead' })
-      await setLike(trx, bob, { story: z!, liked: true })
+      await setTitle(trx, ana, { story: b, title: 'Upon a time' })
+      await setTitle(trx, ana, { story: z, title: 'Zed’s dead' })
+      await setLike(trx, bob, { story: z, liked: true })
 
       const popular = await library(trx, { order: 'popular' })
       expect(popular.items.map((i) => i.title)).toEqual([
@@ -62,7 +63,7 @@ describe('author pages', () => {
     rollback(async (trx) => {
       const ana = await createUser(trx, 'Ana Author')
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
-      await setTitle(trx, ana, { story: b!, title: 'Anas Story' })
+      await setTitle(trx, ana, { story: b, title: 'Anas Story' })
       const author = await findAuthor(trx, 'ana author')
       expect(author).toMatchObject({
         id: ana.id,
@@ -87,10 +88,10 @@ describe('account lists', () => {
       const [a, b, c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
       const [z] = await writeChain(trx, bob, null, 'Z')
       const { thread } = await linkSentence(trx, ana, {
-        story: c!,
-        sentenceId: leafOf(z!),
+        story: c,
+        sentenceId: leafOf(z),
       })
-      await setLike(trx, ana, { story: b!, liked: true })
+      await setLike(trx, ana, { story: b, liked: true })
       await setLike(trx, ana, { story: thread, liked: true })
 
       const favs = await favourites(trx, ana, { order: 'newest' })
@@ -130,7 +131,7 @@ describe('recent', () => {
         await createUser(trx, 'Bob-r'),
       ]
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
-      const [c] = await writeChain(trx, bob, b!, 'C')
+      const [c] = await writeChain(trx, bob, b, 'C')
       await writeChain(trx, bob, null, 'Z')
 
       const recent = await recentSentences(trx, { order: 'newest' })
@@ -166,8 +167,8 @@ describe('digest recipients', () => {
       const past = new Date(Date.now() - 60_000)
       await trx.updateTable('users').set({ last_notified_at: past }).execute()
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
-      const [c] = await writeChain(trx, bob, b!, 'C')
-      await writeChain(trx, ana, c!, 'D')
+      const [c] = await writeChain(trx, bob, b, 'C')
+      await writeChain(trx, ana, c, 'D')
       await updateSettings(trx, cat.id, { isNotifiable: false })
       await writeChain(trx, cat, null, 'Elsewhere')
       const entries = await digestEntries(trx, new Date(Date.now() + 1000))
@@ -179,8 +180,8 @@ describe('digest recipients', () => {
           e.content,
         ]),
       ).toEqual([
-        ['ana-digest', 'bob-digest', leafOf(c!), 'C'],
-        ['bob-digest', 'ana-digest', leafOf(c!) + 1, 'D'],
+        ['ana-digest', 'bob-digest', leafOf(c), 'C'],
+        ['bob-digest', 'ana-digest', leafOf(c) + 1, 'D'],
       ])
     }),
   )
@@ -188,7 +189,7 @@ describe('digest recipients', () => {
 
 describe('digest credits', () => {
   beforeAll(async () => {
-    await startBoss(process.env.DATABASE_URL as string)
+    await startBoss(present(process.env.DATABASE_URL))
   })
   afterAll(async () => {
     await stopBoss()
@@ -205,10 +206,10 @@ describe('digest credits', () => {
       const past = new Date(Date.now() - 60_000)
       await trx.updateTable('users').set({ last_notified_at: past }).execute()
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
-      const [c] = await writeChain(trx, cat, b!, 'C')
-      await setLike(trx, ana, { story: b!, liked: true })
-      await setLike(trx, bob, { story: b!, liked: true })
-      await setTitle(trx, cat, { story: c!, title: 'Cats Title' })
+      const [c] = await writeChain(trx, cat, b, 'C')
+      await setLike(trx, ana, { story: b, liked: true })
+      await setLike(trx, bob, { story: b, liked: true })
+      await setTitle(trx, cat, { story: c, title: 'Cats Title' })
       const credits = await digestCredits(trx, new Date(Date.now() + 1000))
       // Ana's own favourite isn't credited, and Cat's title credits Ana only
       expect(
@@ -258,11 +259,11 @@ describe('stats', () => {
     rollback(async (trx) => {
       const [ana, bob] = [await createUser(trx), await createUser(trx)]
       const [, b, c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
-      await writeChain(trx, bob, b!, 'C2')
-      await linkSentence(trx, ana, { story: c!, sentenceId: leafOf(b!) })
-      await setLike(trx, bob, { story: c!, liked: true })
+      await writeChain(trx, bob, b, 'C2')
+      await linkSentence(trx, ana, { story: c, sentenceId: leafOf(b) })
+      await setLike(trx, bob, { story: c, liked: true })
       const [x] = await writeChain(trx, bob, null, 'X')
-      await deleteSentence(trx, bob, x!)
+      await deleteSentence(trx, bob, x)
       const stats = await computeStats(trx)
       expect(stats).toMatchObject({
         sentences: 4,
@@ -281,7 +282,7 @@ describe('stats', () => {
 
 describe('users and sessions', () => {
   beforeAll(async () => {
-    await startBoss(process.env.DATABASE_URL as string)
+    await startBoss(present(process.env.DATABASE_URL))
   })
   afterAll(async () => {
     await stopBoss()

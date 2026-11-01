@@ -43,27 +43,32 @@ const loadAssets = () => {
     const require = createRequire(import.meta.url)
     const dir = join(tmpdir(), 'tree-of-tales-fonts')
     await mkdir(dir, { recursive: true })
-    const entries = await Promise.all(
-      Object.entries(FONTS).map(async ([style, file]) => {
-        const woff = parseWoff(
-          await readFile(
-            require.resolve(`@fontsource/eb-garamond/files/${file}`),
-          ),
-        )
-        const path = join(dir, file.replace(/\.woff$/, '.ttf'))
-        await writeFile(path, toSfnt(woff))
-        return { style, path, metrics: fontMetrics(woff) }
-      }),
-    )
+    const load = async (file: string) => {
+      const woff = parseWoff(
+        await readFile(
+          require.resolve(`@fontsource/eb-garamond/files/${file}`),
+        ),
+      )
+      const path = join(dir, file.replace(/\.woff$/, '.ttf'))
+      await writeFile(path, toSfnt(woff))
+      return { path, metrics: fontMetrics(woff) }
+    }
+    const [regular, bold, italic] = await Promise.all([
+      load(FONTS.regular),
+      load(FONTS.bold),
+      load(FONTS.italic),
+    ])
     const svg = await readFile(
       join(process.cwd(), 'public', 'tree.svg'),
       'utf8',
     )
     return {
-      fontFiles: entries.map((e) => e.path),
-      metrics: Object.fromEntries(
-        entries.map((e) => [e.style, e.metrics]),
-      ) as Assets['metrics'],
+      fontFiles: [regular.path, bold.path, italic.path],
+      metrics: {
+        regular: regular.metrics,
+        bold: bold.metrics,
+        italic: italic.metrics,
+      },
       logo: placeLogo(svg, { x: PADDING_X, y: 44, width: 96 }),
     }
   })()

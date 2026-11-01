@@ -132,7 +132,7 @@ export const getStoryMap = async (
       order by cand.grp, ${popularOrder}
     `.execute(db)
     const continuations = frontier.map(
-      () => [] as { id: number; pathId: number | null }[],
+      (): { id: number; pathId: number | null }[] => [],
     )
     for (const row of rows) {
       continuations[row.grp]?.push({ id: row.sentence_id, pathId: row.path_id })

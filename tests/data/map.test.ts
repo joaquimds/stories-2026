@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { present } from '../../src/domain/present.ts'
 import { setLike } from '../../src/server/data/likes.ts'
 import { linkSentence } from '../../src/server/data/links.ts'
 import { getStoryMap } from '../../src/server/data/map.ts'
-import { resolveStory } from '../../src/server/data/paths.ts'
 import { getChildren } from '../../src/server/data/stories.ts'
-import { createUser, leafOf, rollback, writeChain } from './helpers.ts'
+import {
+  createUser,
+  leafOf,
+  rollback,
+  writeChain,
+  resolved,
+} from './helpers.ts'
 
 const limits = { trunk: 3, ahead: 2, aside: 1, children: 2, nodes: 50 }
 
@@ -15,14 +21,14 @@ describe('getStoryMap', () => {
       const ana = await createUser(trx)
       const [, b, c, d] = await writeChain(trx, ana, null, 'A', 'B', 'C', 'D')
       // A branch off the story, which itself continues
-      await writeChain(trx, ana, b!, 'C2', 'C2-next')
+      await writeChain(trx, ana, b, 'C2', 'C2-next')
       // Ahead of D: three continuations, one three levels deep
-      await writeChain(trx, ana, d!, 'E', 'F', 'G')
-      await writeChain(trx, ana, d!, 'E2')
-      await writeChain(trx, ana, d!, 'E3')
+      await writeChain(trx, ana, d, 'E', 'F', 'G')
+      await writeChain(trx, ana, d, 'E2')
+      await writeChain(trx, ana, d, 'E3')
 
-      const story = await resolveStory(trx, d!)
-      const nodes = await getStoryMap(trx, story!, limits)
+      const story = await resolved(trx, d)
+      const nodes = await getStoryMap(trx, story, limits)
       const byContent = (content: string) =>
         nodes.find((n) => n.content === content)
 
@@ -52,16 +58,16 @@ describe('getStoryMap', () => {
         await createUser(trx),
       ]
       const [a] = await writeChain(trx, ana, null, 'A')
-      await writeChain(trx, ana, a!, 'Old')
-      const [quiet] = await writeChain(trx, ana, a!, 'Quiet')
-      const [liked] = await writeChain(trx, ana, a!, 'Liked')
-      await setLike(trx, bob, { story: liked!, liked: true })
-      await setLike(trx, cat, { story: liked!, liked: true })
-      await writeChain(trx, bob, quiet!, 'Continued')
+      await writeChain(trx, ana, a, 'Old')
+      const [quiet] = await writeChain(trx, ana, a, 'Quiet')
+      const [liked] = await writeChain(trx, ana, a, 'Liked')
+      await setLike(trx, bob, { story: liked, liked: true })
+      await setLike(trx, cat, { story: liked, liked: true })
+      await writeChain(trx, bob, quiet, 'Continued')
 
-      const story = await resolveStory(trx, a!)
-      const nodes = await getStoryMap(trx, story!, limits)
-      const first = nodes.find((n) => n.content === 'A')!
+      const story = await resolved(trx, a)
+      const nodes = await getStoryMap(trx, story, limits)
+      const first = present(nodes.find((n) => n.content === 'A'))
       const children = nodes.filter((n) => n.parent === first.key)
       // Liked by three people in all, Quiet by two, Old by one; two shown
       expect(children.map((n) => n.content)).toEqual(['Liked', 'Quiet'])
@@ -79,24 +85,24 @@ describe('getStoryMap', () => {
         await createUser(trx),
       ]
       const [a] = await writeChain(trx, ana, null, 'A')
-      const [here] = await writeChain(trx, ana, a!, 'Popular here')
-      const [elsewhere] = await writeChain(trx, ana, a!, 'Popular elsewhere')
-      await writeChain(trx, ana, a!, 'Unread')
+      const [here] = await writeChain(trx, ana, a, 'Popular here')
+      const [elsewhere] = await writeChain(trx, ana, a, 'Popular elsewhere')
+      await writeChain(trx, ana, a, 'Unread')
       // One like on this route...
-      await setLike(trx, bob, { story: here!, liked: true })
+      await setLike(trx, bob, { story: here, liked: true })
       // ...against two likes on another route through the other sentence
       const [z] = await writeChain(trx, cat, null, 'Z')
       const { thread } = await linkSentence(trx, cat, {
-        story: z!,
-        sentenceId: leafOf(elsewhere!),
+        story: z,
+        sentenceId: leafOf(elsewhere),
       })
       await setLike(trx, cat, { story: thread, liked: true })
       await setLike(trx, dan, { story: thread, liked: true })
 
-      const story = (await resolveStory(trx, a!))!
+      const story = await resolved(trx, a)
       const page = await getChildren(trx, story, { order: 'popular' })
       const nodes = await getStoryMap(trx, story, { ...limits, children: 8 })
-      const first = nodes.find((n) => n.content === 'A')!
+      const first = present(nodes.find((n) => n.content === 'A'))
       const onMap = nodes
         .filter((n) => n.parent === first.key)
         .map((n) => n.content)
@@ -110,9 +116,9 @@ describe('getStoryMap', () => {
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [a, , c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
-      await linkSentence(trx, ana, { story: c!, sentenceId: leafOf(a!) })
-      const story = await resolveStory(trx, c!)
-      const nodes = await getStoryMap(trx, story!, { ...limits, trunk: 4 })
+      await linkSentence(trx, ana, { story: c, sentenceId: leafOf(a) })
+      const story = await resolved(trx, c)
+      const nodes = await getStoryMap(trx, story, { ...limits, trunk: 4 })
       const loop = nodes.find((n) => n.loop)
       expect(loop).toMatchObject({ content: 'A', depth: 4, more: 1 })
       // The root is shown when the story is short enough

@@ -1,5 +1,6 @@
 import { type RawBuilder, sql } from 'kysely'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { present } from '../../src/domain/present.ts'
 import { ActionError } from '../../src/domain/errors.ts'
 import { setLike } from '../../src/server/data/likes.ts'
 import { linkSentence, unlinkSentence } from '../../src/server/data/links.ts'
@@ -13,7 +14,13 @@ import {
 import { getChildren } from '../../src/server/data/stories.ts'
 import { setTitle } from '../../src/server/data/titles.ts'
 import { startBoss, stopBoss } from '../../src/server/jobs/boss.ts'
-import { createUser, leafOf, rollback, writeChain } from './helpers.ts'
+import {
+  createUser,
+  leafOf,
+  rollback,
+  writeChain,
+  resolved,
+} from './helpers.ts'
 
 const rejectsWith = async (promise: Promise<unknown>, code: string) => {
   await expect(promise).rejects.toBeInstanceOf(ActionError)
@@ -26,7 +33,7 @@ describe('write', () => {
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [a] = await writeChain(trx, ana, null, 'A')
-      const { thread } = await writeSentence(trx, ana, a!, '  B  ')
+      const { thread } = await writeSentence(trx, ana, a, '  B  ')
       const sentence = await trx
         .selectFrom('sentences')
         .selectAll()
@@ -39,10 +46,10 @@ describe('write', () => {
         .where('to_sentence_id', '=', sentence.id)
         .executeTakeFirstOrThrow()
       expect(link).toMatchObject({
-        from_sentence_id: leafOf(a!),
+        from_sentence_id: leafOf(a),
         author_id: null,
       })
-      const { pathId } = await resolvePath(trx, [0, leafOf(a!), sentence.id])
+      const { pathId } = await resolvePath(trx, [0, leafOf(a), sentence.id])
       expect(pathId).not.toBeNull()
     }),
   )
@@ -68,24 +75,24 @@ describe('link', () => {
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
       const [z] = await writeChain(trx, ana, null, 'Z')
       const first = await linkSentence(trx, ana, {
-        story: b!,
-        sentenceId: leafOf(z!),
+        story: b,
+        sentenceId: leafOf(z),
       })
       const second = await linkSentence(trx, ana, {
-        story: b!,
-        sentenceId: leafOf(z!),
+        story: b,
+        sentenceId: leafOf(z),
       })
       expect(second.thread).toBe(first.thread)
-      expect(first.thread).toBe(`${leafOf(z!)}.${leafOf(z!)}-${leafOf(b!)}`)
+      expect(first.thread).toBe(`${leafOf(z)}.${leafOf(z)}-${leafOf(b)}`)
       const links = await trx
         .selectFrom('links')
         .select('author_id')
-        .where('from_sentence_id', '=', leafOf(b!))
-        .where('to_sentence_id', '=', leafOf(z!))
+        .where('from_sentence_id', '=', leafOf(b))
+        .where('to_sentence_id', '=', leafOf(z))
         .execute()
       expect(links).toEqual([{ author_id: ana.id }])
-      const story = await resolveStory(trx, first.thread)
-      expect(story?.pathIds.at(-1)).not.toBeNull()
+      const story = await resolved(trx, first.thread)
+      expect(story.pathIds.at(-1)).not.toBeNull()
     }),
   )
 })
@@ -98,16 +105,12 @@ describe('the root', () => {
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
       const { thread } = await linkSentence(trx, ana, {
         story: '0',
-        sentenceId: leafOf(b!),
+        sentenceId: leafOf(b),
       })
-      expect(thread).toBe(`${leafOf(b!)}.${leafOf(b!)}-0`)
-      const beginnings = await getChildren(
-        trx,
-        (await resolveStory(trx, '0'))!,
-        {
-          order: 'oldest',
-        },
-      )
+      expect(thread).toBe(`${leafOf(b)}.${leafOf(b)}-0`)
+      const beginnings = await getChildren(trx, await resolved(trx, '0'), {
+        order: 'oldest',
+      })
       expect(beginnings.page.items.map((i) => i.content)).toEqual(['A', 'B'])
       // ...which its linker can undo
       expect((await unlinkSentence(trx, ana, thread)).parentThread).toBe('0')
@@ -121,7 +124,7 @@ describe('the root', () => {
       const [a] = await writeChain(trx, ana, null, 'A')
       await rejectsWith(
         editSentence(trx, ana, {
-          story: a!,
+          story: a,
           index: 0,
           content: 'x',
           branch: true,
@@ -130,7 +133,7 @@ describe('the root', () => {
       )
       await rejectsWith(deleteSentence(trx, ana, '0'), 'forbidden')
       await rejectsWith(
-        linkSentence(trx, ana, { story: a!, sentenceId: 0 }),
+        linkSentence(trx, ana, { story: a, sentenceId: 0 }),
         'notFound',
       )
       await rejectsWith(
@@ -173,7 +176,7 @@ describe('the database', () => {
       const ana = await createUser(trx)
       const [a] = await writeChain(trx, ana, null, 'A')
       await refuses(
-        sql`insert into app.paths (sentence_id) values (${leafOf(a!)})`,
+        sql`insert into app.paths (sentence_id) values (${leafOf(a)})`,
         /paths_check/,
       )
       await refuses(
@@ -191,17 +194,17 @@ describe('edit', () => {
       const ana = await createUser(trx)
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
       const { thread } = await editSentence(trx, ana, {
-        story: b!,
+        story: b,
         index: 1,
         content: 'A!',
         branch: false,
       })
       expect(thread).toBe(b)
-      const story = await resolveStory(trx, b!)
+      const story = await resolved(trx, b)
       const first = await trx
         .selectFrom('sentences')
         .select('content')
-        .where('id', '=', story!.sentenceIds[1]!)
+        .where('id', '=', present(story.sentenceIds[1]))
         .executeTakeFirstOrThrow()
       expect(first.content).toBe('A!')
     }),
@@ -214,9 +217,9 @@ describe('edit', () => {
       const bob = await createUser(trx)
       const [a, b] = await writeChain(trx, ana, null, 'A', 'B')
       // Index 0 is the root
-      const edit = { story: b!, index: 2, content: 'B!', branch: false }
+      const edit = { story: b, index: 2, content: 'B!', branch: false }
       await rejectsWith(editSentence(trx, bob, edit), 'forbidden')
-      await writeChain(trx, bob, a!, 'B2')
+      await writeChain(trx, bob, a, 'B2')
       await expect(editSentence(trx, ana, edit)).resolves.toBeTruthy()
       await rejectsWith(
         editSentence(trx, ana, { ...edit, index: 1 }),
@@ -232,28 +235,28 @@ describe('edit', () => {
       const bob = await createUser(trx)
       const [a, b, c, d] = await writeChain(trx, ana, null, 'A', 'B', 'C', 'D')
       const { thread } = await editSentence(trx, bob, {
-        story: d!,
+        story: d,
         index: 2,
         content: 'B, differently',
         branch: true,
       })
-      const story = await resolveStory(trx, thread)
-      const ids = story!.sentenceIds
+      const story = await resolved(trx, thread)
+      const ids = story.sentenceIds
       expect(ids).toHaveLength(5)
-      expect(ids.slice(0, 2)).toEqual([0, leafOf(a!)])
-      expect(ids[2]).not.toBe(leafOf(b!))
-      expect(ids.slice(3)).toEqual([leafOf(c!), leafOf(d!)])
+      expect(ids.slice(0, 2)).toEqual([0, leafOf(a)])
+      expect(ids[2]).not.toBe(leafOf(b))
+      expect(ids.slice(3)).toEqual([leafOf(c), leafOf(d)])
 
       const branch = await trx
         .selectFrom('sentences')
         .selectAll()
-        .where('id', '=', ids[2]!)
+        .where('id', '=', present(ids[2]))
         .executeTakeFirstOrThrow()
       expect(branch).toMatchObject({
         content: 'B, differently',
         author_id: bob.id,
       })
-      const children = await getChildren(trx, (await resolveStory(trx, a!))!, {
+      const children = await getChildren(trx, await resolved(trx, a), {
         order: 'oldest',
       })
       expect(children.page.items.map((i) => i.content)).toEqual([
@@ -271,12 +274,12 @@ describe('delete', () => {
       const ana = await createUser(trx)
       const bob = await createUser(trx)
       const [a, b] = await writeChain(trx, ana, null, 'A', 'B')
-      await setLike(trx, bob, { story: b!, liked: true })
-      await setTitle(trx, ana, { story: b!, title: 'Gone' })
-      await rejectsWith(deleteSentence(trx, bob, b!), 'forbidden')
-      const result = await deleteSentence(trx, ana, b!)
+      await setLike(trx, bob, { story: b, liked: true })
+      await setTitle(trx, ana, { story: b, title: 'Gone' })
+      await rejectsWith(deleteSentence(trx, bob, b), 'forbidden')
+      const result = await deleteSentence(trx, ana, b)
       expect(result).toEqual({ parentThread: a, deleted: true })
-      expect(await resolveStory(trx, b!)).toBeNull()
+      expect(await resolveStory(trx, b)).toBeNull()
       expect(await trx.selectFrom('likes').selectAll().execute()).toEqual([])
       expect(await trx.selectFrom('titles').selectAll().execute()).toEqual([])
     }),
@@ -288,22 +291,19 @@ describe('delete', () => {
       const ana = await createUser(trx)
       const bob = await createUser(trx)
       const [a, b] = await writeChain(trx, ana, null, 'A', 'B')
-      const [c] = await writeChain(trx, bob, b!, 'C')
-      const result = await deleteSentence(trx, ana, b!)
+      const [c] = await writeChain(trx, bob, b, 'C')
+      const result = await deleteSentence(trx, ana, b)
       expect(result.deleted).toBe(false)
-      const story = await resolveStory(trx, c!)
-      expect(story?.sentenceIds).toEqual([
-        0,
-        ...[a, b, c].map((t) => leafOf(t!)),
-      ])
+      const story = await resolved(trx, c)
+      expect(story.sentenceIds).toEqual([0, ...[a, b, c].map((t) => leafOf(t))])
       const skip = await trx
         .selectFrom('links')
         .selectAll()
-        .where('from_sentence_id', '=', leafOf(a!))
-        .where('to_sentence_id', '=', leafOf(c!))
+        .where('from_sentence_id', '=', leafOf(a))
+        .where('to_sentence_id', '=', leafOf(c))
         .executeTakeFirst()
       expect(skip?.author_id).toBeNull()
-      await rejectsWith(deleteSentence(trx, ana, b!), 'notFound')
+      await rejectsWith(deleteSentence(trx, ana, b), 'notFound')
     }),
   )
 })
@@ -316,8 +316,8 @@ describe('unlink', () => {
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
       const [z] = await writeChain(trx, ana, null, 'Z')
       const { thread } = await linkSentence(trx, ana, {
-        story: b!,
-        sentenceId: leafOf(z!),
+        story: b,
+        sentenceId: leafOf(z),
       })
       await setLike(trx, ana, { story: thread, liked: true })
       const result = await unlinkSentence(trx, ana, thread)
@@ -334,10 +334,10 @@ describe('unlink', () => {
       const bob = await createUser(trx)
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
       const [z] = await writeChain(trx, ana, null, 'Z')
-      await rejectsWith(unlinkSentence(trx, ana, b!), 'invalid')
+      await rejectsWith(unlinkSentence(trx, ana, b), 'invalid')
       const { thread } = await linkSentence(trx, ana, {
-        story: b!,
-        sentenceId: leafOf(z!),
+        story: b,
+        sentenceId: leafOf(z),
       })
       await rejectsWith(unlinkSentence(trx, bob, thread), 'forbidden')
       await writeChain(trx, bob, thread, 'More')
@@ -353,11 +353,11 @@ describe('like', () => {
       const ana = await createUser(trx)
       const bob = await createUser(trx)
       const [a, b] = await writeChain(trx, ana, null, 'A', 'B')
-      const [c] = await writeChain(trx, bob, b!, 'C')
+      const [c] = await writeChain(trx, bob, b, 'C')
       // Deleting B links A to C; nothing has used that path yet
-      await deleteSentence(trx, ana, b!)
-      const skipping = `${leafOf(c!)}.${leafOf(c!)}-${leafOf(a!)}`
-      const ids = [0, leafOf(a!), leafOf(c!)]
+      await deleteSentence(trx, ana, b)
+      const skipping = `${leafOf(c)}.${leafOf(c)}-${leafOf(a)}`
+      const ids = [0, leafOf(a), leafOf(c)]
       expect((await resolvePath(trx, ids)).pathId).toBeNull()
 
       const count = async () =>
@@ -381,17 +381,17 @@ describe('title', () => {
       const bob = await createUser(trx)
       const [a, b] = await writeChain(trx, ana, null, 'A', 'B')
       await rejectsWith(
-        setTitle(trx, bob, { story: b!, title: 'Mine' }),
+        setTitle(trx, bob, { story: b, title: 'Mine' }),
         'forbidden',
       )
       await rejectsWith(
-        setTitle(trx, ana, { story: b!, title: '12.3-4' }),
+        setTitle(trx, ana, { story: b, title: '12.3-4' }),
         'invalid',
       )
-      await setTitle(trx, ana, { story: b!, title: 'First title' })
+      await setTitle(trx, ana, { story: b, title: 'First title' })
       // Retitling replaces the title
       const { slug } = await setTitle(trx, ana, {
-        story: b!,
+        story: b,
         title: 'Second  title',
       })
       expect(slug).toBe('Second_title')
@@ -399,7 +399,7 @@ describe('title', () => {
         { title: 'Second  title'.trim() },
       ])
       await rejectsWith(
-        setTitle(trx, ana, { story: a!, title: 'Second title' }),
+        setTitle(trx, ana, { story: a, title: 'Second title' }),
         'duplicate',
       )
     }),
@@ -408,7 +408,7 @@ describe('title', () => {
 
 describe('report', () => {
   beforeAll(async () => {
-    await startBoss(process.env.DATABASE_URL as string)
+    await startBoss(present(process.env.DATABASE_URL))
   })
   afterAll(async () => {
     await stopBoss()
@@ -419,7 +419,7 @@ describe('report', () => {
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [a] = await writeChain(trx, ana, null, 'A')
-      await reportSentence(trx, null, leafOf(a!))
+      await reportSentence(trx, null, leafOf(a))
       const reports = await trx.selectFrom('reports').selectAll().execute()
       expect(reports).toHaveLength(1)
       const { rows } = await sql<{ count: number }>`

@@ -5,11 +5,12 @@ describe('present', () => {
   it('passes values through, including falsy ones', () => {
     expect(present(0)).toBe(0)
     expect(present('')).toBe('')
-    expect(present(null)).toBe(null)
+    expect(present(false)).toBe(false)
   })
 
-  it('throws on undefined', () => {
+  it('throws on undefined and null', () => {
     expect(() => present([1][1])).toThrow()
+    expect(() => present(null)).toThrow()
   })
 })
 

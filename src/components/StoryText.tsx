@@ -11,6 +11,7 @@ import {
   unlink,
 } from '../server/fns/stories.ts'
 import { ROOT_THREAD } from '../domain/thread.ts'
+import type { Result } from '../domain/errors.ts'
 import { Authors } from './Authors.tsx'
 import styles from './StoryText.module.css'
 import { last } from '../domain/present.ts'
@@ -48,21 +49,18 @@ export const StoryText = ({ story, user }: Props) => {
   const lastIndex = lines.length - 1
 
   // Runs an action, then shows its error or hands its result to `then`
-  const act = async <T extends { ok: boolean }>(
-    action: () => Promise<T>,
-    then: (result: Extract<T, { ok: true }>) => Promise<unknown> | void,
+  const act = async <T extends object>(
+    action: () => Promise<Result<T>>,
+    then: (result: { ok: true } & T) => Promise<unknown> | void,
   ) => {
     setBusy(true)
     setError(null)
     try {
       const result = await action()
       if (result.ok) {
-        await then(result as Extract<T, { ok: true }>)
+        await then(result)
       } else {
-        setError(
-          (result as { error?: string }).error ??
-            'Something went wrong, please try again',
-        )
+        setError(result.error)
       }
     } catch {
       setError('Something went wrong, please try again')

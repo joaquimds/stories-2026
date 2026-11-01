@@ -7,7 +7,13 @@ import {
   resolveStory,
 } from '../../src/server/data/paths.ts'
 import { setTitle } from '../../src/server/data/titles.ts'
-import { createUser, leafOf, rollback, writeChain } from './helpers.ts'
+import {
+  createUser,
+  leafOf,
+  rollback,
+  writeChain,
+  resolved,
+} from './helpers.ts'
 
 describe('resolveStory', () => {
   it(
@@ -15,14 +21,11 @@ describe('resolveStory', () => {
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [a, b, c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
-      const story = await resolveStory(trx, c as string)
-      expect(story?.sentenceIds).toEqual([
-        0,
-        ...[a, b, c].map((t) => leafOf(t as string)),
-      ])
-      expect(story?.thread).toBe(c)
+      const story = await resolved(trx, c)
+      expect(story.sentenceIds).toEqual([0, ...[a, b, c].map((t) => leafOf(t))])
+      expect(story.thread).toBe(c)
       // writing creates the origin paths of every sentence
-      expect(story?.pathIds.every((id) => id !== null)).toBe(true)
+      expect(story.pathIds.every((id) => id !== null)).toBe(true)
     }),
   )
 
@@ -33,18 +36,18 @@ describe('resolveStory', () => {
       const [a, b, c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
       // C links back to B, making a loop
       const { thread: loop } = await linkSentence(trx, ana, {
-        story: c as string,
-        sentenceId: leafOf(b as string),
+        story: c,
+        sentenceId: leafOf(b),
       })
-      expect(loop).toBe(`${leafOf(b!)}.${leafOf(b!)}-${leafOf(c!)}`)
+      expect(loop).toBe(`${leafOf(b)}.${leafOf(b)}-${leafOf(c)}`)
       const { thread: again } = await linkSentence(trx, ana, {
         story: loop,
-        sentenceId: leafOf(c!),
+        sentenceId: leafOf(c),
       })
-      const story = await resolveStory(trx, again)
-      expect(story?.sentenceIds).toEqual([
+      const story = await resolved(trx, again)
+      expect(story.sentenceIds).toEqual([
         0,
-        ...[a, b, c, b, c].map((t) => leafOf(t as string)),
+        ...[a, b, c, b, c].map((t) => leafOf(t)),
       ])
     }),
   )
@@ -56,7 +59,7 @@ describe('resolveStory', () => {
       const [a, b] = await writeChain(trx, ana, null, 'A', 'B')
       expect(await resolveStory(trx, '999999')).toBeNull()
       expect(
-        await resolveStory(trx, `${leafOf(a!)}.${leafOf(a!)}-${leafOf(b!)}`),
+        await resolveStory(trx, `${leafOf(a)}.${leafOf(a)}-${leafOf(b)}`),
       ).toBeNull()
       expect(await resolveStory(trx, 'no-such-title')).toBeNull()
     }),
@@ -67,10 +70,10 @@ describe('resolveStory', () => {
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [, b] = await writeChain(trx, ana, null, 'A', 'B')
-      const { slug } = await setTitle(trx, ana, { story: b!, title: 'A Tale' })
+      const { slug } = await setTitle(trx, ana, { story: b, title: 'A Tale' })
       expect(slug).toBe('A_Tale')
-      const story = await resolveStory(trx, 'A_Tale')
-      expect(story?.thread).toBe(b)
+      const story = await resolved(trx, 'A_Tale')
+      expect(story.thread).toBe(b)
     }),
   )
 })
@@ -81,11 +84,11 @@ describe('ensurePath', () => {
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [a, b, c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
-      const ids = [0, ...[a, b, c].map((t) => leafOf(t!))]
+      const ids = [0, ...[a, b, c].map((t) => leafOf(t))]
       const { pathId } = await resolvePath(trx, ids)
       expect(await ensurePath(trx, ids)).toBe(pathId)
 
-      const beginning = leafOf((await writeChain(trx, ana, null, 'Z'))[0]!)
+      const beginning = leafOf((await writeChain(trx, ana, null, 'Z'))[0])
       // C → Z is not linked yet but paths can be ensured for any sequence
       const longer = [...ids, beginning]
       const created = await ensurePath(trx, longer)

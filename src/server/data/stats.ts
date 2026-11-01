@@ -182,14 +182,20 @@ export const countLoops = (edges: [number, number][]) => {
         if (!index.has(neighbour)) {
           work.push([neighbour, 0])
         } else if (onStack.has(neighbour)) {
-          low.set(node, Math.min(low.get(node)!, index.get(neighbour)!))
+          low.set(
+            node,
+            Math.min(present(low.get(node)), present(index.get(neighbour))),
+          )
         }
         continue
       }
       work.pop()
       const parent = work[work.length - 1]
       if (parent) {
-        low.set(parent[0], Math.min(low.get(parent[0])!, low.get(node)!))
+        low.set(
+          parent[0],
+          Math.min(present(low.get(parent[0])), present(low.get(node))),
+        )
       }
       if (low.get(node) === index.get(node)) {
         let member: number | undefined
