@@ -12,6 +12,12 @@ export default defineConfig(({ command, mode }) => {
   }
   return {
     server: { port: 3000 },
+    // The dev server's scan for browser dependencies follows the share image
+    // route into server code and tries to bundle resvg, a native module it
+    // can't read. The browser never loads it.
+    environments: {
+      client: { optimizeDeps: { exclude: ['@resvg/resvg-js'] } },
+    },
     plugins: [tanstackStart(), viteReact()],
   }
 })
