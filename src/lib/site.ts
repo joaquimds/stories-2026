@@ -5,4 +5,4 @@ export const NOTIFICATIONS_HINT =
   '(sent when other writers continue, favourite or title your stories)'
 // What the root of every story is called where it needs a name
 export const ROOT_NAME = '(the beginning)'
-export const CONTACT_EMAIL = 'stories@joaqu.im'
+export const CONTACT_EMAIL = 'tree@joaqu.im'

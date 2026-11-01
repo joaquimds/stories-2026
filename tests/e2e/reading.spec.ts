@@ -96,10 +96,10 @@ test('links to the contact address', async ({ page }) => {
   await page.goto('/faq')
   await expect(page.getByRole('link', { name: 'Contact' })).toHaveAttribute(
     'href',
-    'mailto:stories@joaqu.im',
+    'mailto:tree@joaqu.im',
   )
   await expect(
-    page.getByRole('main').getByRole('link', { name: 'stories@joaqu.im' }),
+    page.getByRole('main').getByRole('link', { name: 'tree@joaqu.im' }),
   ).toBeVisible()
 })
 

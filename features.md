@@ -70,7 +70,7 @@ decided against.
   built on, probably the same "[deleted]" masking. _Medium._
 
   Meanwhile, the site directs people to email
-  [stories@joaqu.im](mailto:stories@joaqu.im) for queries and deletion
+  [tree@joaqu.im](mailto:tree@joaqu.im) for queries and deletion
   requests, from the footer's Contact link and an FAQ entry.
 
 ## Decided against
