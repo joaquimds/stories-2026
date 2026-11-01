@@ -47,7 +47,7 @@ test('shows titled stories by slug, through links and loops', async ({
 }) => {
   await page.goto('/s/The_Bridge')
   await expect(page.getByRole('heading', { name: 'The Bridge' })).toBeVisible()
-  await expect(page).toHaveTitle('The Bridge | Follow')
+  await expect(page).toHaveTitle('The Bridge | Tree of Tales')
   // The bridge was linked to the clearing
   await page
     .getByRole('link', { name: 'At the clearing, he found her waiting.' })

@@ -10,7 +10,7 @@ export default defineConfig({
         'postgres://stories:stories@localhost:5432/stories_test',
       SESSION_SECRET: 'test-secret-test-secret',
       SITE_URL: 'http://localhost:3000',
-      EMAIL_FROM: 'noreply@follow.joaqu.im',
+      EMAIL_FROM: 'noreply@tree.joaqu.im',
       ADMIN_EMAIL: 'admin@example.com',
     },
     fileParallelism: false,

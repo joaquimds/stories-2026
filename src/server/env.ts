@@ -6,7 +6,7 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(16),
   SITE_URL: z.url().transform((url) => url.replace(/\/$/, '')),
   SMTP2GO_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.email().default('noreply@follow.joaqu.im'),
+  EMAIL_FROM: z.email().default('noreply@tree.joaqu.im'),
   ADMIN_EMAIL: z.preprocess((v) => v || undefined, z.email().optional()),
   PORT: z.coerce.number().int().default(3000),
 })
