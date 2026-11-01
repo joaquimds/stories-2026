@@ -15,17 +15,4 @@ export default tseslint.config(
   js.configs.recommended,
   tseslint.configs.recommended,
   reactHooks.configs.flat['recommended-latest'],
-  {
-    files: ['server.js'],
-    languageOptions: {
-      globals: {
-        AbortController: 'readonly',
-        console: 'readonly',
-        Headers: 'readonly',
-        process: 'readonly',
-        Request: 'readonly',
-        URL: 'readonly',
-      },
-    },
-  },
 )

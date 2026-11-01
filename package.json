@@ -40,7 +40,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "start": "node --env-file-if-exists=.env server.js",
+    "start": "node --env-file-if-exists=.env server.ts",
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.ts",
     "db:seed": "node --env-file-if-exists=.env scripts/seed.ts",
     "typecheck": "tsc",

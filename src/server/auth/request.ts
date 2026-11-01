@@ -64,7 +64,7 @@ export const setSessionCookie = (token: string) => {
 
 export const clearSessionCookie = () => deleteCookie(COOKIE, { path: '/' })
 
-// For rate limits. Render's proxy (and server.js, locally) adds the address
+// For rate limits. Render's proxy (and server.ts, locally) adds the address
 // it saw to X-Forwarded-For.
 export const clientIp = () =>
   lastForwardedFor(getRequestHeader('x-forwarded-for')) ?? 'unknown'

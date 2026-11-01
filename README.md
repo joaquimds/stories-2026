@@ -41,7 +41,7 @@ printed to the console instead of sent. The emails are styled like the app;
 | Script                      |                                                              |
 | --------------------------- | ------------------------------------------------------------ |
 | `pnpm dev`                  | Dev server with HMR                                          |
-| `pnpm build` / `pnpm start` | Production build and server (`server.js`)                    |
+| `pnpm build` / `pnpm start` | Production build and server (`server.ts`)                    |
 | `pnpm db:migrate`           | Run migrations against `DATABASE_URL`                        |
 | `pnpm db:seed`              | Seed an empty database (`-- --reset` drops it first)         |
 | `pnpm email:preview`        | Write each email, with sample content, to `email-previews/`  |
@@ -67,11 +67,11 @@ src/
     email/         SMTP2GO client and templates
     fns/           server functions: validation and auth over data/
     lifecycle.ts   startup (env → migrations → pg-boss) and shutdown
-  server.ts        Start server entry; exports start/stop for server.js
+  server.ts        Start server entry; exports start/stop for the root server.ts
   routes/          TanStack Router file routes
   components/      React components with CSS Modules
   styles/          global.css
-server.js          production HTTP server (node:http, static files), SIGTERM handling
+server.ts          production HTTP server (node:http, static files), SIGTERM handling
 scripts/           migrate, seed
 tests/data/        Vitest against Postgres, each test in a rolled-back transaction
 tests/e2e/         Playwright
@@ -135,7 +135,7 @@ Choices that aren't obvious from the code, mostly made while rebuilding the
 - **Rate limits** live in an extra `rate_limits` table (fixed windows).
   Login and password-reset attempts count even when they fail.
 - **Security headers** (`nosniff`, a referrer policy, no framing, and HSTS
-  once `SITE_URL` is https) are set in `server.js` on every response. There
+  once `SITE_URL` is https) are set in `server.ts` on every response. There
   is no Content Security Policy yet: the app's hydration uses inline
   scripts.
 - **Forgotten passwords** always report success, so the form doesn't reveal

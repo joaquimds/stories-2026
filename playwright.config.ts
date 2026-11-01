@@ -19,7 +19,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     // Every run starts from the seed data
-    command: 'node scripts/seed.ts --reset && pnpm build && node server.js',
+    command: 'node scripts/seed.ts --reset && pnpm build && node server.ts',
     url: `http://localhost:${PORT}/health`,
     reuseExistingServer: false,
     timeout: 120_000,

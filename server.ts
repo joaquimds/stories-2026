@@ -3,15 +3,28 @@
 // else through the app.
 import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
-import { createServer } from 'node:http'
+import {
+  type IncomingMessage,
+  type ServerResponse,
+  createServer,
+} from 'node:http'
 import { extname, join, resolve, sep } from 'node:path'
 import { Readable } from 'node:stream'
+import type { ReadableStream as NodeReadableStream } from 'node:stream/web'
 import { pipeline } from 'node:stream/promises'
-import app, { start, stop } from './dist/server/server.js'
+
+// The built app. Its path is kept out of the import so TypeScript doesn't
+// look for types in dist; they're the source's.
+const BUILT_APP = './dist/server/server.js'
+const {
+  default: app,
+  start,
+  stop,
+} = (await import(BUILT_APP)) as typeof import('./src/server.ts')
 
 const PUBLIC_DIR = resolve('dist/client')
 
-const CONTENT_TYPES = {
+const CONTENT_TYPES: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.ico': 'image/x-icon',
   '.jpg': 'image/jpeg',
@@ -26,7 +39,11 @@ const CONTENT_TYPES = {
 
 // A file from dist/client for GET and HEAD requests, if there is one.
 // Built assets have hashed names, so they can be cached for good.
-const serveFile = async (req, res, pathname) => {
+const serveFile = async (
+  req: IncomingMessage,
+  res: ServerResponse,
+  pathname: string,
+) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return false
   }
@@ -71,8 +88,9 @@ const serveFile = async (req, res, pathname) => {
   return true
 }
 
-// Node's request as a web Request, for the app
-const toRequest = (req, url, signal) => {
+// Node's request as a web Request, for the app. (Node's and the web's
+// stream types differ only on paper, hence the casts here and below.)
+const toRequest = (req: IncomingMessage, url: URL, signal: AbortSignal) => {
   const headers = new Headers()
   for (const [name, value] of Object.entries(req.headers)) {
     for (const item of [value].flat()) {
@@ -87,17 +105,19 @@ const toRequest = (req, url, signal) => {
     headers.set('x-forwarded-for', req.socket.remoteAddress)
   }
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
-  return new Request(url, {
+  // Node needs `duplex` to stream a request body; the DOM types lack it
+  const init: RequestInit & { duplex?: 'half' } = {
     method: req.method,
     headers,
-    body: hasBody ? Readable.toWeb(req) : undefined,
+    body: hasBody ? (Readable.toWeb(req) as ReadableStream) : undefined,
     duplex: hasBody ? 'half' : undefined,
     signal,
-  })
+  }
+  return new Request(url, init)
 }
 
 // The app's web Response, written back to Node's response
-const sendResponse = async (res, response) => {
+const sendResponse = async (res: ServerResponse, response: Response) => {
   res.statusCode = response.status
   for (const [name, value] of response.headers) {
     if (name !== 'set-cookie') {
@@ -112,7 +132,7 @@ const sendResponse = async (res, response) => {
     res.end()
     return
   }
-  await pipeline(Readable.fromWeb(response.body), res)
+  await pipeline(Readable.fromWeb(response.body as NodeReadableStream), res)
 }
 
 await start()
@@ -169,7 +189,7 @@ const port = Number(process.env.PORT ?? 3000)
 server.listen(port, () => console.info(`Listening on http://localhost:${port}`))
 
 // Stop taking requests, let open ones finish, then stop jobs and the pool
-const shutdown = (signal) => {
+const shutdown = (signal: string) => {
   console.info(`${signal} received, shutting down`)
   server.close(async () => {
     await stop()
