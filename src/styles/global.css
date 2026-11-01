@@ -89,15 +89,24 @@ h1 {
   margin-bottom: var(--spacing-0);
 }
 
+/* Links, and buttons that act as links (.link): always underlined, and a
+   little lighter when pointed at or focused */
+a,
+.link {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+
+  &:hover,
+  &:focus-visible {
+    &:not(:disabled) {
+      opacity: 0.7;
+    }
+  }
+}
+
 a {
   color: var(--color-black);
   cursor: pointer;
-  text-decoration: none;
-
-  &:focus,
-  &:hover {
-    text-decoration: underline;
-  }
 }
 
 /* Buttons */
@@ -116,14 +125,13 @@ button {
 
 .button {
   background: var(--color-grey-tint);
+  text-decoration: none;
   border: 1px solid var(--color-grey-dark);
   border-radius: 4px;
   text-align: center;
 
   &:hover,
   &:focus {
-    text-decoration: none;
-
     &:not(:disabled) {
       background: var(--color-grey-light);
     }
@@ -141,13 +149,6 @@ button {
 
   &.current {
     font-weight: bold;
-  }
-
-  &:hover,
-  &:focus {
-    &:not(:disabled) {
-      text-decoration: underline;
-    }
   }
 }
 
