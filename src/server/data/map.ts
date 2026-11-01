@@ -3,6 +3,7 @@ import { ROOT_ID, permalink } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
 import { type ResolvedStory, loadDefaultParents, threadOf } from './paths.ts'
 import { popularOrder, popularityScores } from './rules.ts'
+import { last, present } from '../../domain/present.ts'
 
 // How much of the tree around a story to show
 export const MAP_LIMITS = {
@@ -69,7 +70,7 @@ export const getStoryMap = async (
     )
   }
 
-  const first = trunk[0] as number
+  const first = present(trunk[0])
   const firstContent = await content([first])
   const nodes: MapNode[] = []
   const sequences = new Map<string, number[]>()
@@ -115,7 +116,7 @@ export const getStoryMap = async (
         select f.grp, f.parent_path, l.to_sentence_id as sentence_id
         from unnest(
           ${frontier.map((_, i) => i)}::int[],
-          ${frontier.map((p) => p.ids.at(-1) as number)}::bigint[],
+          ${frontier.map((p) => last(p.ids))}::bigint[],
           ${frontier.map((p) => p.pathId)}::bigint[]
         ) as f(grp, sentence, parent_path)
         join app.links l on l.from_sentence_id = f.sentence
@@ -201,7 +202,7 @@ export const getStoryMap = async (
   const defaults = await loadDefaultParents(db, [...sequences.values()].flat())
   for (const node of nodes) {
     node.permalink = permalink(
-      threadOf(sequences.get(node.key) as number[], defaults),
+      threadOf(present(sequences.get(node.key)), defaults),
     )
   }
   return nodes

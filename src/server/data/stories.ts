@@ -28,6 +28,7 @@ import {
   popularityScores,
 } from './rules.ts'
 import { type SentenceRow, loadSentences } from './sentences.ts'
+import { last, present } from '../../domain/present.ts'
 
 export type Viewer = { id: number; name: string } | null
 
@@ -104,7 +105,7 @@ export const getStory = async (
     if (id === ROOT_ID) {
       return []
     }
-    const sentence = sentences.get(id) as SentenceRow
+    const sentence = present(sentences.get(id))
     const pathId = pathIds[i]
     const prefix = threadOf(sentenceIds.slice(0, i + 1), defaults)
     return [
@@ -252,7 +253,7 @@ const candidatesSql = (story: ResolvedStory): RawBuilder<Candidate> => sql`
   select l.to_sentence_id as sentence_id
   from app.links l
   join app.sentences s on s.id = l.to_sentence_id
-  where l.from_sentence_id = ${story.sentenceIds.at(-1) as number}
+  where l.from_sentence_id = ${last(story.sentenceIds)}
     and s.deleted_at is null
 `
 
@@ -309,7 +310,7 @@ export const getChildren = async (
         sentenceId: id,
         content: sentences.get(id)?.content ?? '',
         permalink: permalink(
-          threadOf(sequences[i] as number[], defaults),
+          threadOf(present(sequences[i]), defaults),
           slugs.get(id),
         ),
       })),

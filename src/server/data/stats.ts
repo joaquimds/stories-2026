@@ -2,6 +2,7 @@ import { sql } from 'kysely'
 import type { Db } from '../db/index.ts'
 import { pathPermalinks } from './paths.ts'
 import { DELETED } from './sentences.ts'
+import { last, present } from '../../domain/present.ts'
 
 export type Stats = {
   sentences: number
@@ -165,7 +166,7 @@ export const countLoops = (edges: [number, number][]) => {
     }
     const work: [number, number][] = [[root, 0]]
     while (work.length) {
-      const frame = work[work.length - 1] as [number, number]
+      const frame = last(work)
       const [node, next] = frame
       if (next === 0) {
         index.set(node, counter)
@@ -177,7 +178,7 @@ export const countLoops = (edges: [number, number][]) => {
       const neighbours = adjacency.get(node) ?? []
       if (next < neighbours.length) {
         frame[1]++
-        const neighbour = neighbours[next] as number
+        const neighbour = present(neighbours[next])
         if (!index.has(neighbour)) {
           work.push([neighbour, 0])
         } else if (onStack.has(neighbour)) {
@@ -193,7 +194,7 @@ export const countLoops = (edges: [number, number][]) => {
       if (low.get(node) === index.get(node)) {
         let member: number | undefined
         do {
-          member = stack.pop() as number
+          member = present(stack.pop())
           onStack.delete(member)
           component.set(member, components)
         } while (member !== node)

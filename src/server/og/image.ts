@@ -8,6 +8,7 @@ import { Resvg } from '@resvg/resvg-js'
 import { SITE_DESCRIPTION, SITE_TITLE } from '../../lib/site.ts'
 import { type FontMetrics, fontMetrics, parseWoff, toSfnt } from './woff.ts'
 import { wrapText } from './wrap.ts'
+import { present } from '../../domain/present.ts'
 
 export const WIDTH = 1200
 export const HEIGHT = 630
@@ -87,7 +88,7 @@ const placeLogo = (
 const measurer = (metrics: FontMetrics, size: number) => (text: string) => {
   let width = 0
   for (const char of text) {
-    width += metrics.advance(char.codePointAt(0) as number)
+    width += metrics.advance(present(char.codePointAt(0)))
   }
   return (width * size) / metrics.unitsPerEm
 }

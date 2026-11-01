@@ -9,12 +9,13 @@ import {
 import type { Db } from '../db/index.ts'
 import { keysetPage, keysetQuery, searchPattern } from './paging.ts'
 import {
-  encodeThreads,
+  encodeOneThread,
   ensurePath,
   pathPermalinks,
   resolveStory,
 } from './paths.ts'
 import { editableSentences } from './rules.ts'
+import { last } from '../../domain/present.ts'
 
 export const DELETED = '[deleted]'
 
@@ -98,7 +99,7 @@ const insertSentence = async (
   await trx
     .insertInto('links')
     .values({
-      from_sentence_id: parentIds.at(-1) as number,
+      from_sentence_id: last(parentIds),
       to_sentence_id: id,
       author_id: null,
     })
@@ -124,8 +125,8 @@ export const writeSentence = async (
     normaliseContent(content),
     parentIds,
   )
-  const [thread] = await encodeThreads(trx, [[...parentIds, id]])
-  return { thread: thread as string }
+  const thread = await encodeOneThread(trx, [...parentIds, id])
+  return { thread }
 }
 
 // Edits the sentence at `index` in a story: in place when the viewer wrote
@@ -177,10 +178,12 @@ export const editSentence = async (
     from app.links where from_sentence_id = ${target}
     on conflict do nothing
   `.execute(trx)
-  const [thread] = await encodeThreads(trx, [
-    [...prefix, id, ...ids.slice(input.index + 1)],
+  const thread = await encodeOneThread(trx, [
+    ...prefix,
+    id,
+    ...ids.slice(input.index + 1),
   ])
-  return { thread: thread as string }
+  return { thread }
 }
 
 // Deletes the last sentence of a story. Sentences with children are only
@@ -193,7 +196,7 @@ export const deleteSentence = async (
 ) => {
   const resolved = await requireStory(trx, story)
   const ids = resolved.sentenceIds
-  const target = ids.at(-1) as number
+  const target = last(ids)
   const sentence = await trx
     .selectFrom('sentences')
     .select(['author_id', 'deleted_at'])
@@ -231,8 +234,8 @@ export const deleteSentence = async (
   } else {
     await trx.deleteFrom('sentences').where('id', '=', target).execute()
   }
-  const [parentThread] = await encodeThreads(trx, [ids.slice(0, -1)])
-  return { parentThread: parentThread as string, deleted: !child }
+  const parentThread = await encodeOneThread(trx, ids.slice(0, -1))
+  return { parentThread, deleted: !child }
 }
 
 export type FragmentItem = { id: number; content: string; permalink: string }

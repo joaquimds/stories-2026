@@ -13,6 +13,7 @@ import {
 import { ROOT_THREAD } from '../domain/thread.ts'
 import { Authors } from './Authors.tsx'
 import styles from './StoryText.module.css'
+import { last } from '../domain/present.ts'
 
 type Props = { story: Story; user: SessionUser | null }
 
@@ -43,7 +44,7 @@ export const StoryText = ({ story, user }: Props) => {
   }
 
   const { lines } = story
-  const leaf = lines.at(-1) as StoryLine
+  const leaf = last(lines)
   const lastIndex = lines.length - 1
 
   // Runs an action, then shows its error or hands its result to `then`

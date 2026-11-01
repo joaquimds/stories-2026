@@ -1,3 +1,4 @@
+import { present } from '../../domain/present.ts'
 // Greedy word wrapping for text drawn in SVG, which doesn't wrap by itself
 
 const ELLIPSIS = '…'
@@ -44,7 +45,7 @@ export const wrapText = (
     return kept
   }
   // Trim the last line that fits until the ellipsis does too
-  let last = kept[maxLines - 1] as string
+  let last = present(kept[maxLines - 1])
   while (last && measure(`${last}${ELLIPSIS}`) > maxWidth) {
     last = last.includes(' ')
       ? last.slice(0, last.lastIndexOf(' '))

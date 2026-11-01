@@ -7,6 +7,7 @@ import { ROOT_NAME } from '../../lib/site.ts'
 import type { Db } from '../db/index.ts'
 import { keysetPage, keysetQuery, searchPattern } from './paging.ts'
 import {
+  encodeOneThread,
   encodeThreads,
   ensurePath,
   pathSentenceIds,
@@ -15,6 +16,7 @@ import {
 import { isStepProtected } from './rules.ts'
 import { type Author, maskContent, requireStory } from './sentences.ts'
 import { leafStep } from './stories.ts'
+import { last, present } from '../../domain/present.ts'
 
 // Links an existing sentence as a child of the story's last sentence
 export const linkSentence = async (
@@ -23,7 +25,7 @@ export const linkSentence = async (
   input: { story: string; sentenceId: number },
 ) => {
   const resolved = await requireStory(trx, input.story)
-  const leaf = resolved.sentenceIds.at(-1) as number
+  const leaf = last(resolved.sentenceIds)
   const child = await trx
     .selectFrom('sentences')
     .select('deleted_at')
@@ -48,8 +50,8 @@ export const linkSentence = async (
   if (inserted) {
     await ensurePath(trx, ids)
   }
-  const [thread] = await encodeThreads(trx, [ids])
-  return { thread: thread as string }
+  const thread = await encodeOneThread(trx, ids)
+  return { thread }
 }
 
 // Removes the link the viewer made into the story's last sentence, along
@@ -87,10 +89,11 @@ export const unlinkSentence = async (
       and p.sentence_id = ${step.leaf}
   `.execute(trx)
   await trx.deleteFrom('links').where('id', '=', link.id).execute()
-  const [parentThread] = await encodeThreads(trx, [
+  const parentThread = await encodeOneThread(
+    trx,
     resolved.sentenceIds.slice(0, -1),
-  ])
-  return { parentThread: parentThread as string }
+  )
+  return { parentThread }
 }
 
 export type LinkItem = {
@@ -167,7 +170,7 @@ export const myLinks = async (
           ? ROOT_NAME
           : maskContent(r.from_content, r.from_deleted_at),
       toContent: maskContent(r.to_content, r.to_deleted_at),
-      permalink: permalink(threads[i] as string),
+      permalink: permalink(present(threads[i])),
     })),
   }
 }

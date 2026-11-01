@@ -1,7 +1,8 @@
 import { sql } from 'kysely'
 import { ROOT_ID } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
-import { encodeThreads } from './paths.ts'
+import { encodeOneThread } from './paths.ts'
+import { last } from '../../domain/present.ts'
 
 // A safety net; the walk is already bounded by the number of links
 const MAX_LENGTH = 200
@@ -14,7 +15,7 @@ export const randomStory = async (db: Db) => {
   const ids = [ROOT_ID]
   const taken = new Set<string>()
   while (ids.length < MAX_LENGTH) {
-    const from = ids.at(-1) as number
+    const from = last(ids)
     const { rows } = await sql<{ id: number }>`
       select c.id from app.links l
       join app.sentences c on c.id = l.to_sentence_id
@@ -31,6 +32,6 @@ export const randomStory = async (db: Db) => {
   if (ids.length === 1) {
     return null
   }
-  const [thread] = await encodeThreads(db, [ids])
-  return thread as string
+  const thread = await encodeOneThread(db, ids)
+  return thread
 }

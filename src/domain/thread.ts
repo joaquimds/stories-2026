@@ -1,3 +1,4 @@
+import { present } from './present.ts'
 // A thread is the public name of a path through the sentence graph.
 //
 // It is the leaf sentence id followed by the non-default steps taken while
@@ -113,8 +114,8 @@ export const encodeSteps = (
   }
   const steps: Step[] = []
   for (let i = sentenceIds.length - 1; i > 0; i--) {
-    const from = sentenceIds[i] as number
-    const to = sentenceIds[i - 1] as number
+    const from = present(sentenceIds[i])
+    const to = present(sentenceIds[i - 1])
     if (defaultParent(from) !== to) {
       steps.push({ from, to })
     }

@@ -8,6 +8,7 @@ import {
   permalink,
 } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
+import { present } from '../../domain/present.ts'
 
 export { permalink }
 
@@ -38,6 +39,9 @@ export const encodeThreads = async (db: Db, sequences: number[][]) => {
   const defaults = await loadDefaultParents(db, sequences.flat())
   return sequences.map((ids) => threadOf(ids, defaults))
 }
+
+export const encodeOneThread = async (db: Db, sentenceIds: number[]) =>
+  present((await encodeThreads(db, [sentenceIds]))[0])
 
 export type ResolvedStory = {
   sentenceIds: number[]
@@ -159,7 +163,7 @@ export const ensurePath = async (
     }
     const row: { id: number } = await trx
       .insertInto('paths')
-      .values({ parent_id: parentId, sentence_id: sentenceIds[i] as number })
+      .values({ parent_id: parentId, sentence_id: present(sentenceIds[i]) })
       .onConflict((oc) =>
         oc.columns(['parent_id', 'sentence_id']).doUpdateSet((eb) => ({
           sentence_id: eb.ref('excluded.sentence_id'),

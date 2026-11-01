@@ -17,6 +17,7 @@ import {
 import { ensurePath } from './paths.ts'
 import { type Author, requireStory } from './sentences.ts'
 import { type StorySummary, summarisePaths } from './summaries.ts'
+import { last } from '../../domain/present.ts'
 
 // Titles a story, adding it to the library. Only the author of the story's
 // last sentence may title it.
@@ -35,7 +36,7 @@ export const setTitle = async (
   const leaf = await trx
     .selectFrom('sentences')
     .select(['author_id', 'deleted_at'])
-    .where('id', '=', sentenceIds.at(-1) as number)
+    .where('id', '=', last(sentenceIds))
     .executeTakeFirstOrThrow()
   if (leaf.deleted_at || leaf.author_id !== viewer.id) {
     throw new ActionError('forbidden')

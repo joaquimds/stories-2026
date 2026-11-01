@@ -22,6 +22,7 @@ import { getChildren, getLinkCandidates, getStory } from '../data/stories.ts'
 import { setTitle } from '../data/titles.ts'
 import { MAX_TITLE_LENGTH } from '../../domain/slug.ts'
 import { runAction, runUserAction } from './action.ts'
+import { last } from '../../domain/present.ts'
 
 const story = z.string().min(1).max(4000)
 const id = z.number().int().positive()
@@ -43,7 +44,7 @@ export const getStoryPage = createServerFn({ method: 'GET' })
       throw notFound()
     }
     const { search } = data
-    const leaf = resolved.sentenceIds.at(-1) as number
+    const leaf = last(resolved.sentenceIds)
     const [view, children, link] = await Promise.all([
       getStory(database, viewer, resolved),
       getChildren(database, resolved, toPageParams(search, 'popular')),

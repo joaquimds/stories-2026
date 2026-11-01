@@ -2,6 +2,7 @@ import { ROOT_ID } from '../../domain/thread.ts'
 import type { Db } from '../db/index.ts'
 import { loadDefaultParents, pathPermalinks } from './paths.ts'
 import { loadSentences } from './sentences.ts'
+import { present } from '../../domain/present.ts'
 
 export type StorySummary = {
   pathId: number
@@ -29,7 +30,7 @@ export const summarisePaths = async (
   return rows.map(({ pathId, title }) => {
     const path = permalinks.get(pathId)
     const ids = path?.sentenceIds ?? []
-    const live = (id: number | undefined) =>
+    const live = (id: number | undefined): id is number =>
       id !== undefined && id !== ROOT_ID && !sentences.get(id)?.deleted
     const key: number[] = []
     const first = ids.find(live)
@@ -39,13 +40,13 @@ export const summarisePaths = async (
     if (!firstOnly) {
       for (let i = 1; i < ids.length; i++) {
         const before = ids[i - 1]
-        if (defaults.get(ids[i] as number) !== before && live(before)) {
-          key.push(before as number)
+        if (defaults.get(present(ids[i])) !== before && live(before)) {
+          key.push(before)
         }
       }
-      const last = ids.at(-1)
-      if (live(last)) {
-        key.push(last as number)
+      const leaf = ids.at(-1)
+      if (live(leaf)) {
+        key.push(leaf)
       }
     }
     return {
