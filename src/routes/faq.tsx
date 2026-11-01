@@ -204,6 +204,30 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
     ),
   },
   {
+    question: 'What do you keep about me?',
+    answer: (
+      <>
+        <p>
+          If you sign up: your email address, your pen name, a scrambled form of
+          your password, and whether you want notifications. What you write,
+          link, favourite and title is shown publicly with your pen name;
+          fragments you report are seen only by the site's admin.
+        </p>
+        <p>
+          When you log in, a cookie keeps you logged in; there are no other
+          cookies, no adverts and no tracking. Your browser keeps an unsent
+          fragment so it isn't lost. To slow down abuse, your IP address is
+          counted when you log in, sign up or report a fragment, and forgotten
+          after a day.
+        </p>
+        <p>
+          Emails only go out when you ask to reset your password, or as
+          notifications if you've chosen them. Nothing is shared or sold.
+        </p>
+      </>
+    ),
+  },
+  {
     question: 'How do I get in touch, or delete my account?',
     answer: (
       <p>

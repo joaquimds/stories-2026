@@ -2,10 +2,11 @@ import {
   deleteCookie,
   getCookie,
   getRequest,
-  getRequestIP,
+  getRequestHeader,
   setCookie,
 } from '@tanstack/react-start/server'
 import { ActionError } from '../../domain/errors.ts'
+import { lastForwardedFor } from '../../domain/forwarded.ts'
 import { db } from '../db/index.ts'
 import { env } from '../env.ts'
 import { SESSION_DAYS, type SessionUser, resolveSession } from './sessions.ts'
@@ -63,4 +64,7 @@ export const setSessionCookie = (token: string) => {
 
 export const clearSessionCookie = () => deleteCookie(COOKIE, { path: '/' })
 
-export const clientIp = () => getRequestIP({ xForwardedFor: true }) ?? 'unknown'
+// For rate limits. Render's proxy (and server.js, locally) adds the address
+// it saw to X-Forwarded-For.
+export const clientIp = () =>
+  lastForwardedFor(getRequestHeader('x-forwarded-for')) ?? 'unknown'

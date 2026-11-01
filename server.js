@@ -81,7 +81,8 @@ const toRequest = (req, url, signal) => {
       }
     }
   }
-  // Behind Render's proxy this is already set; locally, use the socket
+  // Behind Render's proxy this is already set, ending with the address the
+  // proxy saw; without a proxy, it is the socket's address
   if (!headers.has('x-forwarded-for') && req.socket.remoteAddress) {
     headers.set('x-forwarded-for', req.socket.remoteAddress)
   }
@@ -116,7 +117,23 @@ const sendResponse = async (res, response) => {
 
 await start()
 
+// Sent with every response. HSTS only once served over HTTPS, so local
+// http://localhost keeps working.
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  // The site is never shown inside another site's page
+  'X-Frame-Options': 'DENY',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  ...(process.env.SITE_URL?.startsWith('https://')
+    ? { 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains' }
+    : {}),
+}
+
 const server = createServer(async (req, res) => {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    res.setHeader(name, value)
+  }
   // Stops the app's work if the browser goes away
   const aborted = new AbortController()
   res.once('close', () => {

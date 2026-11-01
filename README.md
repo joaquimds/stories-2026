@@ -98,7 +98,13 @@ UptimeRobot.
      `EMAIL_FROM=noreply@tree.joaqu.im`, optionally `ADMIN_EMAIL`, and
      `NODE_VERSION=26`.
    - Add the custom domain `tree.joaqu.im` and its CNAME record.
-4. **UptimeRobot**: an HTTP monitor on `https://tree.joaqu.im/health`
+4. **Check the client address.** Rate limits use the last
+   `X-Forwarded-For` entry, which Render's proxy adds; Render doesn't
+   document its proxy headers, so after the first deploy, log in once with
+   `X-Forwarded-For: 1.2.3.4` set and check that the `rate_limits` row
+   doesn't say `1.2.3.4` (and isn't a Render or Cloudflare address shared
+   by everyone).
+5. **UptimeRobot**: an HTTP monitor on `https://tree.joaqu.im/health`
    every 5 minutes keeps the free instance awake.
 
 Each start runs pending migrations (under Kysely's migration lock), starts
@@ -128,6 +134,10 @@ Choices that aren't obvious from the code, mostly made while rebuilding the
 
 - **Rate limits** live in an extra `rate_limits` table (fixed windows).
   Login and password-reset attempts count even when they fail.
+- **Security headers** (`nosniff`, a referrer policy, no framing, and HSTS
+  once `SITE_URL` is https) are set in `server.js` on every response. There
+  is no Content Security Policy yet: the app's hydration uses inline
+  scripts.
 - **Forgotten passwords** always report success, so the form doesn't reveal
   which emails have accounts. Passwords need at least 8 characters.
 - **Favourites** are ordered by when they were liked; the like's path id is
