@@ -9,8 +9,8 @@ decided against.
 
 - **Recent** (`/recent`, in the navbar): the newest sentences anywhere on the
   site, each with the sentence it follows, its author and date. **Loose
-  ends** shows sentences nothing follows yet, oldest first, to bring stalled
-  stories back. A separate "needs a continuation" page was dropped: early on
+  ends** shows sentences nothing follows yet, also newest first (oldest
+  first would fill up with endings nobody wants to continue). A separate "needs a continuation" page was dropped: early on
   it would nearly match Recent.
 - **Random story** (`/random`, linked from the home page and every tale's
   end): walks from the root choosing a random continuation at each step.
