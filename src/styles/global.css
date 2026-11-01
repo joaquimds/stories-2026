@@ -100,6 +100,12 @@ a {
   }
 }
 
+/* The narrator's parenthetical asides: links inside them are underlined so
+   they stand out from the aside's text */
+.aside a {
+  text-decoration: underline;
+}
+
 /* Buttons */
 
 button {

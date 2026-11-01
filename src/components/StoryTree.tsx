@@ -41,7 +41,7 @@ export const StoryTree = ({
       <div className={`${styles.half} ${styles.top}`}>
         <div className={`${styles.content} ${styles.page}`}>
           {story.isRoot ? (
-            <p className={styles.begin}>
+            <p className={`${styles.begin} aside`}>
               (choose a beginning, start a new story,{' '}
               <Link to="/library">visit the library</Link>, or{' '}
               <RandomLink>read a random story</RandomLink>)
@@ -73,7 +73,7 @@ export const StoryTree = ({
               ))}
             </ul>
           ) : (
-            <p className={styles.end}>
+            <p className={`${styles.end} aside`}>
               {story.isRoot ? null : (
                 <>
                   (tale&apos;s end; write more, link to another, or{' '}
