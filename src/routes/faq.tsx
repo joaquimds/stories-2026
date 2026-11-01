@@ -37,18 +37,11 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
   {
     question: 'Where can I find something new to read?',
     answer: (
-      <>
-        <p>
-          The <Link to="/recent">recent</Link> page lists the newest fragments
-          from every story. Its {'"Loose ends"'} list shows fragments that
-          nothing follows yet, oldest first: good places to pick up a story
-          someone left behind.
-        </p>
-        <p>
-          Or <Link to="/random">read a random story</Link>, which wanders from a
-          beginning, taking a different turn each time.
-        </p>
-      </>
+      <p>
+        The <Link to="/recent">recent</Link> page lists the newest fragments
+        from every story. Its {'"Loose ends"'} tab shows the newest ending
+        fragments.
+      </p>
     ),
   },
   {
@@ -63,20 +56,13 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
   {
     question: 'How do I read the map?',
     answer: (
-      <>
-        <p>
-          Every story has a map, found under the story text. It grows out from
-          the story&apos;s earlier fragments: the story you are reading is drawn
-          dark, with a ring where you are, and the other paths branch off around
-          it.
-        </p>
-        <p>
-          Point at a fragment to see it, or tap it on a phone, and click it (or
-          tap again) to go there. Drag to move around and scroll to zoom. A{' '}
-          {'"↺"'} marks a path that loops back on itself, and {'"+"'} with a
-          number shows how many more paths lie beyond.
-        </p>
-      </>
+      <p>
+        Every story has a map, found under the story text. The path you are on
+        is drawn darker, with a ring where you are. Hover over (or tap) points
+        to read the associated fragments. A {'"↺"'} marks a path that loops back
+        on itself, and {'"+"'} with a number is displayed if there are more
+        hidden paths to explore here.
+      </p>
     ),
   },
   {
@@ -141,19 +127,12 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
   {
     question: 'Can I change a fragment someone else wrote?',
     answer: (
-      <>
-        <p>
-          Not the original, but you can write a variation of it. Once you have
-          an account, click any fragment in a story and choose{' '}
-          {'"write a variation"'}. Your version becomes a new branch alongside
-          the original, and the rest of the story carries on after it, so
-          readers can follow either.
-        </p>
-        <p>
-          This is also how to change your own fragments once they exist in other{' '}
-          {"users'"} stories.
-        </p>
-      </>
+      <p>
+        Not the original, but you can write a variation of it. Once you have an
+        account, click any fragment in a story and choose{' '}
+        {'"write a variation"'}. Your version becomes a new branch alongside the
+        original.
+      </p>
     ),
   },
   {

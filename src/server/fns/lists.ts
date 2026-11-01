@@ -51,13 +51,12 @@ export const getStatsPage = createServerFn({ method: 'GET' }).handler(
   },
 )
 
-// Newest first; loose ends oldest first, to bring stalled stories back
+// Newest first, loose ends too: old endings nobody took up would otherwise
+// fill the list
 export const getRecent = createServerFn({ method: 'GET' })
   .validator(recentSearchSchema)
   .handler(({ data }) =>
-    recentSentences(
-      db(),
-      keysetParams(data, data.loose ? 'oldest' : 'newest'),
-      { looseEnds: data.loose },
-    ),
+    recentSentences(db(), keysetParams(data, 'newest'), {
+      looseEnds: data.loose,
+    }),
   )
