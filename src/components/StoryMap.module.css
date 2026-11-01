@@ -1,0 +1,106 @@
+.map {
+  border-radius: var(--spacing-1);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 60vh;
+  position: relative;
+}
+
+.controls {
+  display: flex;
+  gap: var(--spacing-1);
+  position: absolute;
+  right: var(--spacing-2);
+  top: var(--spacing-1);
+
+  button {
+    font-size: var(--font-size-3);
+  }
+}
+
+.canvas {
+  cursor: grab;
+  flex-grow: 1;
+  touch-action: none;
+  user-select: none;
+  width: 100%;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.edge {
+  fill: none;
+  stroke: var(--color-grey-medium);
+  stroke-linejoin: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.edge-story {
+  fill: none;
+  stroke: var(--color-black);
+  stroke-linejoin: round;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.dot {
+  fill: var(--color-white);
+  stroke: var(--color-grey-dark);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.dot-story {
+  fill: var(--color-black);
+}
+
+.ring {
+  fill: none;
+  stroke: var(--color-black);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.target {
+  cursor: pointer;
+
+  circle {
+    fill: transparent;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible circle {
+    stroke: var(--color-black);
+    stroke-dasharray: 2 2;
+  }
+}
+
+/* The full sentence for the dot pointed at, in the site's card style */
+.popover {
+  background: var(--color-white);
+  border-radius: var(--spacing-1);
+  box-shadow: var(--card-shadow);
+  padding: var(--spacing-1) var(--spacing-2);
+  position: absolute;
+  width: max-content;
+  z-index: 1;
+
+  a {
+    font-size: var(--font-size-2);
+  }
+}
+
+.notes {
+  color: var(--color-grey-dark);
+  font-size: var(--font-size-0);
+  margin-left: var(--spacing-1);
+  white-space: nowrap;
+}

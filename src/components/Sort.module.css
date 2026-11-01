@@ -1,0 +1,9 @@
+.sort {
+  display: flex;
+  justify-content: space-evenly;
+  margin: 0 calc(-1 * var(--spacing-0)) var(--spacing-2);
+
+  > * {
+    padding: 0 var(--spacing-0);
+  }
+}

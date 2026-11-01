@@ -1,0 +1,49 @@
+.stats {
+  h2 {
+    font-size: var(--font-size-4);
+    margin: var(--spacing-3) 0 var(--spacing-1);
+  }
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+
+  th,
+  td {
+    border-bottom: 1px solid var(--color-grey-light);
+    padding: var(--spacing-1) 0;
+    text-align: left;
+  }
+
+  td {
+    font-variant-numeric: tabular-nums;
+    padding-left: var(--spacing-2);
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+.bar-cell {
+  width: 50%;
+}
+
+.bar {
+  background: var(--color-grey-medium);
+  border-radius: 2px;
+  display: block;
+  height: var(--spacing-1);
+}
+
+.records {
+  dt {
+    font-weight: bold;
+    margin-top: var(--spacing-1);
+  }
+}
+
+.updated {
+  color: var(--color-grey-dark);
+  font-size: var(--font-size-0);
+  margin-top: var(--spacing-3);
+}

@@ -1,0 +1,12 @@
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-2);
+}
+
+.note {
+  font-size: var(--font-size-0);
+  text-align: center;
+  width: 100%;
+}

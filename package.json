@@ -1,0 +1,54 @@
+{
+  "name": "tree-of-tales",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=26"
+  },
+  "dependencies": {
+    "@fontsource/courier-prime": "^5.3.0",
+    "@fontsource/eb-garamond": "^5.3.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "@tanstack/react-router": "^1.170.46",
+    "@tanstack/react-start": "^1.169.4",
+    "d3-force": "^3.0.0",
+    "kysely": "^0.29.7",
+    "pg": "^8.23.1",
+    "pg-boss": "^12.38.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/d3-force": "^3.0.10",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "start": "node --env-file-if-exists=.env server.ts",
+    "db:migrate": "node --env-file-if-exists=.env scripts/migrate.ts",
+    "db:seed": "node --env-file-if-exists=.env scripts/seed.ts",
+    "typecheck": "tsc",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "email:preview": "node --env-file-if-exists=.env scripts/preview-emails.ts"
+  }
+}
