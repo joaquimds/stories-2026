@@ -326,16 +326,9 @@ export const StoryText = ({ story, user }: Props) => {
           download
         </a>
         <Link
-          to="/read/$story"
-          params={{ story: story.permalink.replace(/^\/s\//, '') }}
-          className={styles.read}
-        >
-          read as one piece
-        </Link>
-        <Link
           to="/map/$story"
           params={{ story: story.permalink.replace(/^\/s\//, '') }}
-          className={styles.read}
+          className={styles.map}
         >
           map
         </Link>

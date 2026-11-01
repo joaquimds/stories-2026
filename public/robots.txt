@@ -1,8 +1,7 @@
 # Stories are endless paths through the same fragments: crawl the beginnings,
-# the library and named stories, not every map, reading view and random walk.
+# the library and named stories, not every map and random walk.
 User-agent: *
 Disallow: /map/
-Disallow: /read/
 Disallow: /random
 Disallow: /account
 Disallow: /login

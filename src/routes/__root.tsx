@@ -16,7 +16,7 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../lib/site.ts'
 import appCss from '../styles/global.css?url'
 
 // Routes whose pages scroll as a whole rather than within their content
-const SCROLLING = ['/login', '/reset', '/faq', '/stats', '/read/']
+const SCROLLING = ['/login', '/reset', '/faq', '/stats']
 
 export const Route = createRootRoute({
   beforeLoad: () => loadAppContext(),

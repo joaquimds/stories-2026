@@ -127,24 +127,6 @@ export const getRandomStory = createServerFn({ method: 'GET' }).handler(() =>
   randomStory(db()),
 )
 
-// The story alone, for reading as one piece
-export const getStoryText = createServerFn({ method: 'GET' })
-  .validator(z.object({ story }))
-  .handler(async ({ data }) => {
-    const database = db()
-    const resolved = await resolveStory(database, data.story)
-    if (!resolved || resolved.sentenceIds.length < 2) {
-      throw notFound()
-    }
-    const { title, permalink, lines } = await getStory(database, null, resolved)
-    return {
-      title,
-      permalink,
-      sentences: lines.filter((l) => !l.deleted).map((l) => l.content),
-      authors: lines.map((l) => l.author),
-    }
-  })
-
 // The tree around a story, for the map
 export const getMap = createServerFn({ method: 'GET' })
   .validator(z.object({ story }))

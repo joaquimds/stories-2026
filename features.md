@@ -33,9 +33,6 @@ decided against.
   (or a first tap on touch screens) shows it in full in a popover, which
   opens it when clicked. Drag to pan, scroll or buttons to zoom. How to read it is in
   the FAQ rather than on the page.
-- **Read as one piece** (`/read/<story>`): the story as continuous prose with
-  its title and byline, skipping deleted sentences; prints without the
-  site's header and footer.
 - **Share images** (`/og/<story>`): each story's link preview shows its title
   and opening in EB Garamond. The SVG is laid out by hand, wrapping text
   with glyph widths read from the font file, and drawn to PNG by resvg, the
