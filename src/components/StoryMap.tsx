@@ -301,43 +301,33 @@ const arrowhead = (tip: Point, direction: Point, size: number) => {
   }
 }
 
-// A link as a line with an arrowhead where it arrives, kept clear of the
-// dots by `inset` (and `arrive` at the end); curved when two sentences link both ways, so the two
-// don't overlap
+// A link as a line with an arrowhead where it arrives, or at both ends for
+// two sentences linking each other, kept clear of the dots by `leave` and
+// `arrive`
 const linkShape = (
   a: Point,
   b: Point,
-  bend: number,
-  inset: number,
+  leave: number,
   arrive: number,
   head: number,
+  twoWay: boolean,
 ) => {
   const length = Math.hypot(b.x - a.x, b.y - a.y) || 1
-  const normal = { x: -(b.y - a.y) / length, y: (b.x - a.x) / length }
-  const control = {
-    x: (a.x + b.x) / 2 + normal.x * bend,
-    y: (a.y + b.y) / 2 + normal.y * bend,
+  const u = { x: (b.x - a.x) / length, y: (b.y - a.y) / length }
+  const from = Math.min(leave, length * 0.45)
+  const to = Math.min(arrive, length * 0.45)
+  const end = arrowhead({ x: b.x - u.x * to, y: b.y - u.y * to }, u, head)
+  const start = twoWay
+    ? arrowhead(
+        { x: a.x + u.x * from, y: a.y + u.y * from },
+        { x: -u.x, y: -u.y },
+        head,
+      )
+    : { base: { x: a.x + u.x * from, y: a.y + u.y * from }, d: '' }
+  return {
+    line: `M ${start.base.x} ${start.base.y} L ${end.base.x} ${end.base.y}`,
+    head: `${start.d} ${end.d}`.trim(),
   }
-  const at = (t: number) => {
-    const u = 1 - t
-    return {
-      x: u * u * a.x + 2 * u * t * control.x + t * t * b.x,
-      y: u * u * a.y + 2 * u * t * control.y + t * t * b.y,
-    }
-  }
-  const t0 = Math.min(inset / length, 0.45)
-  const t1 = 1 - Math.min(arrive / length, 0.45)
-  const tip = at(t1)
-  const along = {
-    x: 2 * (1 - t1) * (control.x - a.x) + 2 * t1 * (b.x - control.x),
-    y: 2 * (1 - t1) * (control.y - a.y) + 2 * t1 * (b.y - control.y),
-  }
-  const arrow = arrowhead(tip, along, head)
-  const start = at(t0)
-  const line = bend
-    ? `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${arrow.base.x} ${arrow.base.y}`
-    : `M ${start.x} ${start.y} L ${arrow.base.x} ${arrow.base.y}`
-  return { line, head: arrow.d }
 }
 
 // A sentence linking to itself, drawn as a small loop above it that comes
@@ -654,22 +644,21 @@ export const StoryMap = ({
             return null
           }
           const key = linkKey(from, to)
-          const story = storyLinks.has(key)
-          const both = graph.links.has(linkKey(to, from))
-          const length = Math.hypot(b.x - a.x, b.y - a.y)
+          const reverse = linkKey(to, from)
+          const twoWay = from !== to && graph.links.has(reverse)
+          // A pair linking both ways is one line, drawn once
+          if (twoWay && from > to) {
+            return null
+          }
+          const story =
+            storyLinks.has(key) || (twoWay && storyLinks.has(reverse))
           const head = (story ? 9 : 7) * px
+          // Clear of the ring where you are
+          const clear = (id: number) => (id === current ? 13 : 8) * px
           const shape =
             from === to
               ? selfLoop(a, 22 * px, head)
-              : linkShape(
-                  a,
-                  b,
-                  both ? length * 0.2 : 0,
-                  8 * px,
-                  // Clear of the ring where you are
-                  (to === current ? 13 : 8) * px,
-                  head,
-                )
+              : linkShape(a, b, clear(from), clear(to), head, twoWay)
           return (
             <g key={key} className={story ? styles['edge-story'] : styles.edge}>
               <path d={shape.line} />
