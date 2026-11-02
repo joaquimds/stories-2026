@@ -31,7 +31,7 @@ decided against.
   branches below it), so the map eases into place rather than bursting out
   of the centre. The layout restarts only when the tree changes, not when
   the same data arrives again after a preload. The story is dark, the
-  reader's position ringed, the centre green and tales' ends red (outlined
+  reader's position ringed, the beginning (the root) green and tales' ends red (outlined
   off the story). Where a sentence has more continuations than fit, the
   most popular are shown, ranked exactly as on the story page. Pointing at
   a dot (or a first tap on touch screens, or keyboard focus) shows the

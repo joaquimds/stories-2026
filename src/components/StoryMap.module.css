@@ -60,7 +60,7 @@
   stroke: var(--color-black);
 }
 
-/* Where the map starts */
+/* The beginning of every story */
 .dot-start {
   fill: var(--color-green);
   stroke: var(--color-green);

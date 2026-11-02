@@ -10,7 +10,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapNode } from '../server/data/map.ts'
 import { ROOT_NAME } from '../lib/site.ts'
-import { storyParam } from '../domain/thread.ts'
+import { ROOT_ID, storyParam } from '../domain/thread.ts'
 import styles from './StoryMap.module.css'
 
 // The distance each step along a story is pulled out from the centre
@@ -81,13 +81,13 @@ const framing = (
   return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, scale }
 }
 
-// Dark on the story being read, faded off it; the centre green and tales'
+// Dark on the story being read, faded off it; the beginning green and tales'
 // ends red
 const dotClass = (node: MapNode) =>
   [
     styles.dot,
     node.onStory ? styles['dot-story'] : '',
-    node.parent === null ? styles['dot-start'] : '',
+    node.sentenceId === ROOT_ID ? styles['dot-start'] : '',
     node.ending ? styles['dot-end'] : '',
   ].join(' ')
 
