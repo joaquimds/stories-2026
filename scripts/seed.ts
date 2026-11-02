@@ -94,8 +94,8 @@ const writeStories = async (
     'Every night, the lighthouse blinked a different message.',
   )
 
-  // Crossing over: the bridge leads to the clearing, and the clearing loops
-  // back to the garden
+  // Crossing over: the bridge leads to the clearing, the clearing loops
+  // back to the garden...
   const crossing = await linkSentence(trx, ana, {
     story: bridge,
     sentenceId: Number(clearing.split('.')[0]),
@@ -103,6 +103,12 @@ const writeStories = async (
   await linkSentence(trx, cat, {
     story: clearing,
     sentenceId: Number(garden.split('.')[0]),
+  })
+  // ...and the garden leads straight to the clearing, so the two link each
+  // other
+  await linkSentence(trx, bob, {
+    story: garden,
+    sentenceId: Number(clearing.split('.')[0]),
   })
 
   await setTitle(trx, bob, { story: bridge, title: 'The Bridge' })

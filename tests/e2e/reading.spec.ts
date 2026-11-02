@@ -33,8 +33,9 @@ test('sorts children and keeps the order in the URL', async ({ page }) => {
   await page.getByRole('link', { name: 'Newest' }).click()
   await expect(page).toHaveURL(/order=newest/)
   const children = page.locator('main ul li')
+  // The garden was linked straight to the clearing last
   await expect(children.first()).toHaveText(
-    'He took the right path, into the trees.',
+    'At the clearing, he found her waiting.',
   )
   await page.getByRole('link', { name: 'Oldest' }).click()
   await expect(children.first()).toHaveText(
@@ -127,14 +128,14 @@ test('lists recent sentences and loose ends', async ({ page }) => {
 
 test('reads a random story', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'read a random story' }).click()
+  await page.getByRole('link', { name: 'random', exact: true }).click()
   await expect(page).toHaveURL(/\/s\//)
   await expect(page.locator('main').getByText(/^By /)).toBeVisible()
 })
 
 test('shows where a story could have gone another way', async ({ page }) => {
   await page.goto('/s/The_Bridge')
-  await page.getByRole('button', { name: '1 other path here' }).click()
+  await page.getByRole('button', { name: '2 other paths here' }).click()
   await page
     .getByRole('link', { name: '→ He took the right path, into the trees.' })
     .click()

@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { ROOT_THREAD } from '../domain/thread.ts'
 import type { Page } from '../domain/pagination.ts'
 import type { Order } from '../domain/pagination.ts'
 import type { StorySearch } from '../domain/search.ts'
@@ -42,9 +43,12 @@ export const StoryTree = ({
         <div className={`${styles.content} ${styles.page}`}>
           {story.isRoot ? (
             <p className={`${styles.begin} aside`}>
-              (choose a beginning, start a new story,{' '}
-              <Link to="/library">visit the library</Link>, or{' '}
-              <RandomLink>read a random story</RandomLink>)
+              (choose a beginning, start a new story, visit the{' '}
+              <Link to="/library">library</Link> or the{' '}
+              <Link to="/map/$story" params={{ story: ROOT_THREAD }}>
+                map
+              </Link>
+              , or read a <RandomLink>random</RandomLink> story)
             </p>
           ) : (
             <StoryText story={story} user={user} />
