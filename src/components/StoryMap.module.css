@@ -32,23 +32,26 @@
   }
 }
 
-.edge {
-  fill: var(--color-grey-medium);
+.edge,
+.edge-story {
+  fill: none;
+  stroke: var(--color-grey-medium);
+  stroke-linecap: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+
+  .head {
+    fill: var(--color-grey-medium);
+    stroke: none;
+  }
 }
 
 .edge-story {
-  fill: var(--color-black);
-}
+  stroke: var(--color-black);
+  stroke-width: 3;
 
-/* A sentence linking to itself: a line, not a tapering shape */
-.edge-loop {
-  fill: none;
-  stroke: var(--color-grey-medium);
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
-
-  &.edge-story {
-    stroke: var(--color-black);
+  .head {
+    fill: var(--color-black);
   }
 }
 

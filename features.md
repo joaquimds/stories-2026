@@ -24,8 +24,8 @@ decided against.
   all of them. Counts printed inline were rejected as breaking up the prose,
   and the actions row is unchanged. The opening sentence has none.
 - **Map** (`/map/<story>`, linked as "map"): the graph around a story,
-  one dot per sentence and a tapering line per link (wide where it leaves,
-  narrow where it arrives), so loops show as lines leading back to a dot
+  one dot per sentence and a line per link with an arrowhead where it
+  arrives (curved when two sentences link both ways), so loops show as lines leading back to a dot
   already there. It loads the story's last few sentences, the branches
   leaving them and a few levels ahead, ranked as on the story page, plus
   every sentence leading into the current one (one level back, the story's

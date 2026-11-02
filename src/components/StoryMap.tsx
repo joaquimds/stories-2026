@@ -287,54 +287,73 @@ const useForceLayout = (graph: Graph, anchor: number) => {
   return positions
 }
 
-// A link drawn as a tapering shape, wide where it leaves and narrow where
-// it arrives, so a loop's direction shows; curved when two sentences link
-// both ways. `inset` keeps it clear of the dots.
-const taper = (
+// An arrowhead with its tip at `tip`, pointing along `direction`
+const arrowhead = (tip: Point, direction: Point, size: number) => {
+  const length = Math.hypot(direction.x, direction.y) || 1
+  const u = { x: direction.x / length, y: direction.y / length }
+  const base = { x: tip.x - u.x * size, y: tip.y - u.y * size }
+  const half = size * 0.55
+  return {
+    base,
+    d: `M ${tip.x} ${tip.y} L ${base.x - u.y * half} ${base.y + u.x * half} L ${
+      base.x + u.y * half
+    } ${base.y - u.x * half} Z`,
+  }
+}
+
+// A link as a line with an arrowhead where it arrives, kept clear of the
+// dots by `inset` (and `arrive` at the end); curved when two sentences link both ways, so the two
+// don't overlap
+const linkShape = (
   a: Point,
   b: Point,
-  widths: [number, number],
   bend: number,
   inset: number,
+  arrive: number,
+  head: number,
 ) => {
-  const dx = b.x - a.x
-  const dy = b.y - a.y
-  const length = Math.hypot(dx, dy) || 1
-  const normal = { x: -dy / length, y: dx / length }
+  const length = Math.hypot(b.x - a.x, b.y - a.y) || 1
+  const normal = { x: -(b.y - a.y) / length, y: (b.x - a.x) / length }
   const control = {
     x: (a.x + b.x) / 2 + normal.x * bend,
     y: (a.y + b.y) / 2 + normal.y * bend,
   }
-  const t0 = Math.min(inset / length, 0.45)
-  const t1 = 1 - t0
-  const steps = bend ? 12 : 1
-  const left: string[] = []
-  const right: string[] = []
-  for (let i = 0; i <= steps; i++) {
-    const t = t0 + ((t1 - t0) * i) / steps
+  const at = (t: number) => {
     const u = 1 - t
-    const p = {
+    return {
       x: u * u * a.x + 2 * u * t * control.x + t * t * b.x,
       y: u * u * a.y + 2 * u * t * control.y + t * t * b.y,
     }
-    const d = {
-      x: 2 * u * (control.x - a.x) + 2 * t * (b.x - control.x),
-      y: 2 * u * (control.y - a.y) + 2 * t * (b.y - control.y),
-    }
-    const dl = Math.hypot(d.x, d.y) || 1
-    const n = { x: -d.y / dl, y: d.x / dl }
-    const half = (widths[0] + ((widths[1] - widths[0]) * i) / steps) / 2
-    left.push(`${p.x + n.x * half} ${p.y + n.y * half}`)
-    right.push(`${p.x - n.x * half} ${p.y - n.y * half}`)
   }
-  return `M ${left.join(' L ')} L ${right.reverse().join(' L ')} Z`
+  const t0 = Math.min(inset / length, 0.45)
+  const t1 = 1 - Math.min(arrive / length, 0.45)
+  const tip = at(t1)
+  const along = {
+    x: 2 * (1 - t1) * (control.x - a.x) + 2 * t1 * (b.x - control.x),
+    y: 2 * (1 - t1) * (control.y - a.y) + 2 * t1 * (b.y - control.y),
+  }
+  const arrow = arrowhead(tip, along, head)
+  const start = at(t0)
+  const line = bend
+    ? `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${arrow.base.x} ${arrow.base.y}`
+    : `M ${start.x} ${start.y} L ${arrow.base.x} ${arrow.base.y}`
+  return { line, head: arrow.d }
 }
 
-// A sentence linking to itself, drawn as a small loop above it
-const selfLoop = (a: Point, size: number) =>
-  `M ${a.x} ${a.y} C ${a.x - size} ${a.y - size * 1.6} ${a.x + size} ${
-    a.y - size * 1.6
-  } ${a.x} ${a.y}`
+// A sentence linking to itself, drawn as a small loop above it that comes
+// back down with an arrowhead
+const selfLoop = (a: Point, size: number, head: number) => {
+  const c1 = { x: a.x - size, y: a.y - size * 1.6 }
+  const c2 = { x: a.x + size, y: a.y - size * 1.6 }
+  const end = { x: a.x + size * 0.25, y: a.y - size * 0.45 }
+  const arrow = arrowhead(end, { x: end.x - c2.x, y: end.y - c2.y }, head)
+  return {
+    line: `M ${a.x - size * 0.25} ${a.y - size * 0.45} C ${c1.x} ${c1.y} ${
+      c2.x
+    } ${c2.y} ${arrow.base.x} ${arrow.base.y}`,
+    head: arrow.d,
+  }
+}
 
 const sentence = (fragment: MapFragment) =>
   fragment.id === ROOT_ID ? ROOT_NAME : fragment.content
@@ -636,30 +655,26 @@ export const StoryMap = ({
           }
           const key = linkKey(from, to)
           const story = storyLinks.has(key)
-          const className = story ? styles['edge-story'] : styles.edge
-          if (from === to) {
-            return (
-              <path
-                key={key}
-                d={selfLoop(a, 22 * px)}
-                className={`${className} ${styles['edge-loop']}`}
-              />
-            )
-          }
           const both = graph.links.has(linkKey(to, from))
           const length = Math.hypot(b.x - a.x, b.y - a.y)
+          const head = (story ? 9 : 7) * px
+          const shape =
+            from === to
+              ? selfLoop(a, 22 * px, head)
+              : linkShape(
+                  a,
+                  b,
+                  both ? length * 0.2 : 0,
+                  8 * px,
+                  // Clear of the ring where you are
+                  (to === current ? 13 : 8) * px,
+                  head,
+                )
           return (
-            <path
-              key={key}
-              d={taper(
-                a,
-                b,
-                story ? [6 * px, 1.5 * px] : [4 * px, 1 * px],
-                both ? length * 0.2 : 0,
-                7 * px,
-              )}
-              className={className}
-            />
+            <g key={key} className={story ? styles['edge-story'] : styles.edge}>
+              <path d={shape.line} />
+              <path d={shape.head} className={styles.head} />
+            </g>
           )
         })}
         {fragments.map((fragment) => {
