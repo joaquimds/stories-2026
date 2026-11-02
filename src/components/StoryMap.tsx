@@ -81,13 +81,18 @@ const framing = (
   return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, scale }
 }
 
-// Dark on the story being read, faded off it; the beginning green and tales'
-// ends red
+// Dark on the story being read, faded off it; the beginning green, the
+// earliest fragment shown blue when the map starts later than that, and
+// tales' ends red
 const dotClass = (node: MapNode) =>
   [
     styles.dot,
     node.onStory ? styles['dot-story'] : '',
-    node.sentenceId === ROOT_ID ? styles['dot-start'] : '',
+    node.sentenceId === ROOT_ID
+      ? styles['dot-start']
+      : node.parent === null
+        ? styles['dot-earliest']
+        : '',
     node.ending ? styles['dot-end'] : '',
   ].join(' ')
 
