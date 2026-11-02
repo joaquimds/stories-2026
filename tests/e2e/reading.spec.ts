@@ -219,8 +219,13 @@ test('loads what leads into the earliest sentence on a map', async ({
   await page.reload()
   const beginning = map.getByRole('link', { name: '(the beginning)' })
   await expect(beginning).toHaveCount(0)
+  // Clicking the earliest moves there, like any dot, and loads what leads
+  // into it, losing nothing already on the map
   const url = page.url()
   await map.getByRole('link', { name: /In the garden/ }).click()
   await expect(beginning).toHaveCount(1)
-  expect(page.url()).toBe(url)
+  await expect(page).not.toHaveURL(url)
+  await expect(map.getByRole('link', { name: /Neither of them/ })).toHaveCount(
+    1,
+  )
 })

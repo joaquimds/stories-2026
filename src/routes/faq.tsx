@@ -63,7 +63,7 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
         there. Paths that loop lead back to a point already on the map, and{' '}
         {'"+"'} with a number is displayed if there are more hidden paths to
         explore here. The beginning is green and endings are red; a blue point
-        marks where the map starts, and clicking it shows what leads there.
+        marks where the map starts, and moving there shows what leads to it.
       </p>
     ),
   },

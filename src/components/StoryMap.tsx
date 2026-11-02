@@ -340,9 +340,9 @@ const selfLoop = (a: Point, size: number) =>
 const sentence = (fragment: MapFragment) =>
   fragment.id === ROOT_ID ? ROOT_NAME : fragment.content
 
-// The graph around a story, which grows as you explore: a dot opens the map
-// around its sentence and adds what lies beyond it, the earliest sentence
-// shown loads what leads into it, and nothing already placed moves far.
+// The graph around a story, which grows as you explore: a dot moves the map
+// to its sentence and adds what lies beyond it (and, for the earliest
+// sentence shown, what leads into it), and nothing already placed moves far.
 // Panned by dragging and zoomed with the wheel or the buttons.
 export const StoryMap = ({
   graph: loaded,
@@ -356,7 +356,7 @@ export const StoryMap = ({
   const [lastLoaded, setLastLoaded] = useState(loaded)
   if (loaded !== lastLoaded) {
     setLastLoaded(loaded)
-    setGraph(merge(graph, loaded))
+    setGraph((g) => merge(g, loaded))
   }
 
   const { path, prefixes, extensions } = story
@@ -743,9 +743,9 @@ export const StoryMap = ({
                     show(id)
                     return
                   }
-                  // The earliest sentence shown loads what leads into it
+                  // Like any dot, it moves there; the earliest sentence shown
+                  // also loads what leads into it
                   if (loadsAbove) {
-                    event.preventDefault()
                     void loadAbove(id)
                   }
                 }}

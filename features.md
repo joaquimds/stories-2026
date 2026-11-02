@@ -32,7 +32,8 @@ decided against.
   keyboard) moves along the map, adding what lies beyond without
   rebuilding it, and the camera glides there. The earliest of the story's
   sentences shown is blue until the map reaches the beginning (the root,
-  green); clicking it loads everything leading in, two levels up. Endings
+  green); clicking it moves there like any dot and also loads everything
+  leading in, two levels up. Endings
   are red, outlined off the story. Pointing at a dot (or a first tap, or
   focus) shows its sentence in a popover, whose text opens a story: the
   current one up to that sentence if it is on it, the current one
