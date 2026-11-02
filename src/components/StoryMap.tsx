@@ -10,7 +10,6 @@ import {
 } from 'd3-force'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapFragment, MapGraph } from '../server/data/map.ts'
-import { getMapParents } from '../server/fns/stories.ts'
 import { ROOT_NAME } from '../lib/site.ts'
 import { ROOT_ID, storyParam } from '../domain/thread.ts'
 import { last, present } from '../domain/present.ts'
@@ -341,8 +340,8 @@ const sentence = (fragment: MapFragment) =>
   fragment.id === ROOT_ID ? ROOT_NAME : fragment.content
 
 // The graph around a story, which grows as you explore: a dot moves the map
-// to its sentence and adds what lies beyond it (and, for the earliest
-// sentence shown, what leads into it), and nothing already placed moves far.
+// to its sentence and adds what lies beyond it and what leads into it, and
+// nothing already placed moves far.
 // Panned by dragging and zoomed with the wheel or the buttons.
 export const StoryMap = ({
   graph: loaded,
@@ -390,20 +389,6 @@ export const StoryMap = ({
       extensions[fragment.id] ??
       fragment.origin
     )
-  }
-
-  const [loadingAbove, setLoadingAbove] = useState(false)
-  const loadAbove = async (id: number) => {
-    if (loadingAbove) {
-      return
-    }
-    setLoadingAbove(true)
-    try {
-      const more = await getMapParents({ data: { sentenceId: id } })
-      setGraph((g) => merge(g, more))
-    } finally {
-      setLoadingAbove(false)
-    }
   }
 
   const [size, setSize] = useState(DEFAULT_SIZE)
@@ -525,8 +510,8 @@ export const StoryMap = ({
     [
       styles.dot,
       onStory.has(fragment.id) ? styles['dot-story'] : '',
-      // The beginning green; the earliest of the story shown blue when the
-      // map starts later than that
+      // The beginning green; the earliest of the story shown blue, marking
+      // where the map starts, when that is later than the beginning
       fragment.id === ROOT_ID
         ? styles['dot-start']
         : fragment.id === earliest
@@ -598,7 +583,6 @@ export const StoryMap = ({
         viewBox={viewBox}
         role="img"
         aria-label="Map of the story's branches"
-        aria-busy={loadingAbove}
         onPointerDown={(event) => {
           if (event.target === event.currentTarget) {
             setHovered(null)
@@ -684,7 +668,6 @@ export const StoryMap = ({
             return null
           }
           const id = fragment.id
-          const loadsAbove = id === earliest && id !== ROOT_ID
           return (
             <g
               key={id}
@@ -741,12 +724,6 @@ export const StoryMap = ({
                   if (pointerType.current === 'touch' && hovered !== id) {
                     event.preventDefault()
                     show(id)
-                    return
-                  }
-                  // Like any dot, it moves there; the earliest sentence shown
-                  // also loads what leads into it
-                  if (loadsAbove) {
-                    void loadAbove(id)
                   }
                 }}
               >

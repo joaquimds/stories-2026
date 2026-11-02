@@ -27,13 +27,15 @@ decided against.
   one dot per sentence and a tapering line per link (wide where it leaves,
   narrow where it arrives), so loops show as lines leading back to a dot
   already there. It loads the story's last few sentences, the branches
-  leaving them and a few levels ahead, ranked as on the story page, and
+  leaving them and a few levels ahead, ranked as on the story page, plus
+  every sentence leading into the current one (one level back, the story's
+  previous sentence first, then by when they were linked), and
   grows as you explore: clicking a dot (or a second tap; Enter from the
   keyboard) moves along the map, adding what lies beyond without
   rebuilding it, and the camera glides there. The earliest of the story's
   sentences shown is blue until the map reaches the beginning (the root,
-  green); clicking it moves there like any dot and also loads everything
-  leading in, two levels up. Endings
+  green); moving there, like moving anywhere, loads what leads into it.
+  Endings
   are red, outlined off the story. Pointing at a dot (or a first tap, or
   focus) shows its sentence in a popover, whose text opens a story: the
   current one up to that sentence if it is on it, the current one

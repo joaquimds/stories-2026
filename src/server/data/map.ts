@@ -16,8 +16,7 @@ export const MAP_LIMITS = {
   aside: 2,
   // Continuations loaded per sentence, the most popular first
   children: 8,
-  // Levels, and sentences per level, loaded when asking what leads in
-  above: 2,
+  // Sentences loaded that lead into the current one
   parents: 8,
   fragments: 150,
 }
@@ -126,8 +125,9 @@ type Frontier = {
 }
 
 // The graph around a story: its last few sentences, the branches leaving
-// them, and what lies a few steps ahead. Each sentence appears once; a
-// route that comes back to one already found shows as a link to it.
+// them, what lies a few steps ahead, and everything that leads into the
+// current sentence. Each sentence appears once; a route that comes back to
+// one already found shows as a link to it.
 export const getStoryMap = async (
   db: Db,
   story: ResolvedStory,
@@ -221,48 +221,30 @@ export const getStoryMap = async (
     frontier = next
   }
 
-  return {
-    fragments: await describe(db, found.ids),
-    links: found.links,
-  }
-}
-
-// What leads into a sentence: every sentence linking to it, and what leads
-// into those, a few levels up
-export const getMapAbove = async (
-  db: Db,
-  sentenceId: number,
-  limits = MAP_LIMITS,
-): Promise<MapGraph> => {
-  const found = collector()
-  found.add(sentenceId)
-  let frontier = [sentenceId]
-  for (let level = 0; level < limits.above && frontier.length; level++) {
-    const rows = await db
-      .selectFrom('links as l')
-      .innerJoin('sentences as s', 's.id', 'l.from_sentence_id')
-      .select(['l.from_sentence_id', 'l.to_sentence_id'])
-      .where('l.to_sentence_id', 'in', frontier)
-      .where('s.deleted_at', 'is', null)
-      .orderBy('l.to_sentence_id')
-      .orderBy('l.id')
-      .execute()
-    const next: number[] = []
-    const perSentence = new Map<number, number>()
-    for (const row of rows) {
-      const count = perSentence.get(row.to_sentence_id) ?? 0
-      if (count >= limits.parents || found.ids.length >= limits.fragments) {
-        continue
-      }
-      perSentence.set(row.to_sentence_id, count + 1)
-      found.link(row.from_sentence_id, row.to_sentence_id)
-      if (!found.has(row.from_sentence_id)) {
-        found.add(row.from_sentence_id)
-        next.push(row.from_sentence_id)
-      }
+  // What leads into the current sentence: the story's previous sentence
+  // first, so it is never cut off, then the rest by when they were linked
+  const current = present(all.at(-1))
+  const previous = all.at(-2)
+  const leadingIn = await db
+    .selectFrom('links as l')
+    .innerJoin('sentences as s', 's.id', 'l.from_sentence_id')
+    .select('l.from_sentence_id as id')
+    .where('l.to_sentence_id', '=', current)
+    .where('s.deleted_at', 'is', null)
+    .orderBy('l.id')
+    .execute()
+  const parents = [
+    ...leadingIn.filter((p) => p.id === previous),
+    ...leadingIn.filter((p) => p.id !== previous),
+  ]
+  for (const { id } of parents.slice(0, limits.parents)) {
+    if (!found.has(id) && found.ids.length >= limits.fragments) {
+      break
     }
-    frontier = next
+    found.link(id, current)
+    found.add(id)
   }
+
   return {
     fragments: await describe(db, found.ids),
     links: found.links,

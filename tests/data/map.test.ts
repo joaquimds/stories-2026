@@ -5,7 +5,6 @@ import { linkSentence } from '../../src/server/data/links.ts'
 import {
   type MapGraph,
   extensionPermalinks,
-  getMapAbove,
   getStoryMap,
 } from '../../src/server/data/map.ts'
 import { getChildren } from '../../src/server/data/stories.ts'
@@ -22,7 +21,6 @@ const limits = {
   ahead: 2,
   aside: 1,
   children: 2,
-  above: 2,
   parents: 8,
   fragments: 50,
 }
@@ -171,23 +169,25 @@ describe('getStoryMap', () => {
   )
 })
 
-describe('getMapAbove', () => {
+describe('what leads in', () => {
   it(
-    'finds everything that leads into a sentence, a few levels up',
+    'loads everything that leads into the current sentence, one level back',
     rollback(async (trx) => {
       const ana = await createUser(trx)
-      const [, b, c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
+      const [, , c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
       const [z] = await writeChain(trx, ana, null, 'Z')
       await linkSentence(trx, ana, { story: z, sentenceId: leafOf(c) })
-      const graph = await getMapAbove(trx, leafOf(c), limits)
+      const graph = await getStoryMap(trx, await resolved(trx, c), {
+        ...limits,
+        trunk: 2,
+      })
       const { before, byContent } = view(graph)
-      // C is reached from B, and also linked from Z
+      // C is reached from B, and also linked from Z, the story's own
+      // previous sentence first
       expect(before('C')).toEqual(['B', 'Z'])
-      // Two levels up: B's and Z's parents are there, but no further
-      expect(before('B')).toEqual(['A'])
-      expect(before('Z')).toEqual([''])
-      expect(before('A')).toEqual([])
-      expect(byContent('B')?.origin).toBe(`/s/${b}`)
+      // One level only: nothing leading into Z
+      expect(before('Z')).toEqual([])
+      expect(byContent('A')).toBeUndefined()
     }),
   )
 })

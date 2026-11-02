@@ -9,7 +9,7 @@ import { db } from '../db/index.ts'
 import { setLike } from '../data/likes.ts'
 import { linkSentence, unlinkSentence } from '../data/links.ts'
 import { resolveStory } from '../data/paths.ts'
-import { extensionPermalinks, getMapAbove, getStoryMap } from '../data/map.ts'
+import { extensionPermalinks, getStoryMap } from '../data/map.ts'
 import { randomStory } from '../data/random.ts'
 import { reportSentence } from '../data/reports.ts'
 import {
@@ -155,8 +155,3 @@ export const getMap = createServerFn({ method: 'GET' })
       title: view.title,
     }
   })
-
-// What leads into a sentence on the map
-export const getMapParents = createServerFn({ method: 'GET' })
-  .validator(z.object({ sentenceId: z.number().int().nonnegative() }))
-  .handler(({ data }) => getMapAbove(db(), data.sentenceId))
