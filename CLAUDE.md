@@ -50,3 +50,7 @@ hand: update it in the same change as any migration.
 
 `pnpm check` (typecheck, lint, unit and data tests) and `pnpm test:e2e`
 before pushing. Both need Postgres; see the README.
+
+## Git
+
+Commit and push straight to `main`; no branches or pull requests.
