@@ -38,16 +38,17 @@ printed to the console instead of sent. The emails are styled like the app;
 
 ### Scripts
 
-| Script                      |                                                              |
-| --------------------------- | ------------------------------------------------------------ |
-| `pnpm dev`                  | Dev server with HMR                                          |
-| `pnpm build` / `pnpm start` | Production build and server (`server.ts`)                    |
-| `pnpm db:migrate`           | Run migrations against `DATABASE_URL`                        |
-| `pnpm db:seed`              | Seed an empty database (`-- --reset` drops it first)         |
-| `pnpm email:preview`        | Write each email, with sample content, to `email-previews/`  |
-| `pnpm check`                | Typecheck, lint and unit/data tests                          |
-| `pnpm test`                 | Unit and data-layer tests (uses the `stories_test` database) |
-| `pnpm test:e2e`             | Playwright tests (uses the `stories_e2e` database)           |
+| Script                      |                                                               |
+| --------------------------- | ------------------------------------------------------------- |
+| `pnpm dev`                  | Dev server with HMR                                           |
+| `pnpm build` / `pnpm start` | Production build and server (`server.ts`)                     |
+| `pnpm db:migrate`           | Run migrations against `DATABASE_URL`                         |
+| `pnpm db:seed`              | Seed an empty database (`-- --reset` drops it first)          |
+| `pnpm db:seed -- --as NAME` | Replace every fragment with the seed stories, written by NAME |
+| `pnpm email:preview`        | Write each email, with sample content, to `email-previews/`   |
+| `pnpm check`                | Typecheck, lint and unit/data tests                           |
+| `pnpm test`                 | Unit and data-layer tests (uses the `stories_test` database)  |
+| `pnpm test:e2e`             | Playwright tests (uses the `stories_e2e` database)            |
 
 The data-layer tests drop and recreate the `app` and `pgboss` schemas in
 `stories_test` (override with `TEST_DATABASE_URL`). The end-to-end tests

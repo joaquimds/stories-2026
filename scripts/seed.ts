@@ -1,4 +1,8 @@
-// Seeds a small graph of stories. With --reset, drops the app schema first.
+// Seeds a small graph of stories.
+//
+// With --reset, drops the app schema first and creates three users.
+// With --as <pen name>, deletes every fragment instead (keeping accounts)
+// and writes the stories as that existing user.
 import { sql } from 'kysely'
 import { ROOT_THREAD } from '../src/domain/thread.ts'
 import { hashPassword } from '../src/server/auth/passwords.ts'
@@ -8,6 +12,8 @@ import { setLike } from '../src/server/data/likes.ts'
 import { linkSentence } from '../src/server/data/links.ts'
 import { writeSentence } from '../src/server/data/sentences.ts'
 import { setTitle } from '../src/server/data/titles.ts'
+import type { Author } from '../src/server/data/sentences.ts'
+import type { Db } from '../src/server/db/index.ts'
 
 const url = process.env.DATABASE_URL
 if (!url) {
@@ -21,31 +27,12 @@ if (process.argv.includes('--reset')) {
 }
 await migrate(db)
 
-const existing = await db.selectFrom('users').select('id').executeTakeFirst()
-if (existing) {
-  console.info('Database already has users; run with --reset to start over')
-  await db.destroy()
-  process.exit(0)
-}
-
-// Every seeded account has the password "password"
-const passwordHash = await hashPassword('password')
-const createUser = (name: string) =>
-  db
-    .insertInto('users')
-    .values({
-      name,
-      email: `${name.toLowerCase()}@example.com`,
-      password_hash: passwordHash,
-    })
-    .returning(['id', 'name'])
-    .executeTakeFirstOrThrow()
-const ana = await createUser('Ana')
-const bob = await createUser('Bob')
-const cat = await createUser('Cat')
-
-await db.transaction().execute(async (trx) => {
-  const write = async (author: typeof ana, story: string, content: string) =>
+// The stories, written by three authors (or one author three times)
+const writeStories = async (
+  trx: Db,
+  [ana, bob, cat]: [Author, Author, Author],
+) => {
+  const write = async (author: Author, story: string, content: string) =>
     (await writeSentence(trx, author, story, content)).thread
 
   const garden = await write(
@@ -120,10 +107,66 @@ await db.transaction().execute(async (trx) => {
 
   await setTitle(trx, bob, { story: bridge, title: 'The Bridge' })
   await setTitle(trx, ana, { story: clearing, title: 'Waiting' })
-  await setLike(trx, cat, { story: bridge, liked: true })
-  await setLike(trx, ana, { story: bridge, liked: true })
-  await setLike(trx, bob, { story: crossing.thread, liked: true })
-})
+  // Favourites only between different people
+  if (new Set([ana.id, bob.id, cat.id]).size === 3) {
+    await setLike(trx, cat, { story: bridge, liked: true })
+    await setLike(trx, ana, { story: bridge, liked: true })
+    await setLike(trx, bob, { story: crossing.thread, liked: true })
+  }
+}
+
+const asIndex = process.argv.indexOf('--as')
+if (asIndex !== -1) {
+  const name = process.argv[asIndex + 1]
+  const author = name
+    ? await db
+        .selectFrom('users')
+        .select(['id', 'name'])
+        .where('name', '=', name)
+        .executeTakeFirst()
+    : undefined
+  if (!author) {
+    throw new Error(`No user with the pen name ${JSON.stringify(name)}`)
+  }
+  await db.transaction().execute(async (trx) => {
+    // Everything but the root; links, paths, favourites, titles and reports
+    // go with the fragments
+    const { numDeletedRows } = await trx
+      .deleteFrom('sentences')
+      .where('id', '<>', 0)
+      .executeTakeFirst()
+    console.info(`Deleted ${numDeletedRows} fragments`)
+    await writeStories(trx, [author, author, author])
+  })
+  console.info(`Seeded the stories as ${author.name}`)
+  await db.destroy()
+  process.exit(0)
+}
+
+const existing = await db.selectFrom('users').select('id').executeTakeFirst()
+if (existing) {
+  console.info('Database already has users; run with --reset to start over')
+  await db.destroy()
+  process.exit(0)
+}
+
+// Every seeded account has the password "password"
+const passwordHash = await hashPassword('password')
+const createUser = (name: string) =>
+  db
+    .insertInto('users')
+    .values({
+      name,
+      email: `${name.toLowerCase()}@example.com`,
+      password_hash: passwordHash,
+    })
+    .returning(['id', 'name'])
+    .executeTakeFirstOrThrow()
+const ana = await createUser('Ana')
+const bob = await createUser('Bob')
+const cat = await createUser('Cat')
+
+await db.transaction().execute((trx) => writeStories(trx, [ana, bob, cat]))
 
 console.info('Seeded 3 users and their stories')
 await db.destroy()
