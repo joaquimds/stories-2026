@@ -8,6 +8,21 @@
   position: relative;
 }
 
+/* The story's title, where it sits on the story's own page; on white so
+   the map passes underneath, and not in the way of pointing at it */
+.title {
+  background: var(--color-white);
+  border-radius: var(--spacing-0);
+  left: calc(var(--spacing-2) - var(--spacing-0));
+  margin: 0;
+  max-width: calc(100% - 10rem);
+  padding: 0 var(--spacing-0);
+  pointer-events: none;
+  position: absolute;
+  top: var(--spacing-2);
+  z-index: 1;
+}
+
 .controls {
   display: flex;
   gap: var(--spacing-1);

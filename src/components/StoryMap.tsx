@@ -356,9 +356,12 @@ export const StoryMap = ({
   graph: loaded,
   story,
   tab,
+  title,
 }: {
   graph: MapGraph
   story: MapStory
+  // Shown in the top left when the story has one
+  title?: string | null
   // The tab at the foot of the map, back to the story
   tab?: ReactNode
 }) => {
@@ -561,6 +564,7 @@ export const StoryMap = ({
 
   return (
     <div className={styles.map}>
+      {title ? <h1 className={styles.title}>{title}</h1> : null}
       <div className={styles.controls}>
         <button
           type="button"

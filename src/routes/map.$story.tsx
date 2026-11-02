@@ -22,13 +22,12 @@ function MapPage() {
     Route.useLoaderData()
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <h1>{title ? `Map of ${title}` : 'Map'}</h1>
-      </div>
-      {/* One map that grows as you move around it */}
+      {/* One map that grows as you move around it, full height like the
+          story's book, with the story's title inside it */}
       <StoryMap
         graph={graph}
         story={{ path, prefixes, extensions }}
+        title={title}
         tab={
           <Link to={permalink} className="book-tab">
             (story)

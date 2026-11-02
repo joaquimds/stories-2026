@@ -26,6 +26,8 @@ decided against.
 - **Map** (`/map/<story>`, reached by the "(map)" tab at the foot of the
   book, over the fold, and left by the "(story)" tab in the same place on the
   map; both share the `.book-tab` style): the graph around a story,
+  full height like the story's book, with the story's title (if it has one)
+  in its top left on white, so the map passes underneath;
   one dot per sentence and a line per link with an arrowhead where it
   arrives (one line with an arrowhead at each end when two sentences link
   each other), so loops show as lines leading back to a dot

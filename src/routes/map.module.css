@@ -1,20 +1,7 @@
-/* Title and map are spaced like the map and the footer */
 .page {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
   gap: var(--spacing-2);
   min-height: 0;
-}
-
-.header {
-  align-items: baseline;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
-  justify-content: space-between;
-
-  h1 {
-    margin: 0;
-  }
 }

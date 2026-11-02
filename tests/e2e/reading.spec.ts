@@ -178,9 +178,7 @@ test('maps the branches around a story', async ({ page }) => {
   await page.goto('/s/The_Bridge')
   await page.getByRole('link', { name: '(map)' }).click()
   await expect(page).toHaveURL('/map/The_Bridge')
-  await expect(
-    page.getByRole('heading', { name: 'Map of The Bridge' }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'The Bridge' })).toBeVisible()
   const map = page.getByRole('img', { name: "Map of the story's branches" })
   const dot = (name: RegExp) => map.getByRole('link', { name })
   await expect(dot(/She took the left path/)).toHaveCount(1)

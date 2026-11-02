@@ -116,7 +116,7 @@ a {
   box-shadow: var(--card-shadow);
   clip-path: inset(calc(-2 * var(--spacing-1)) calc(-2 * var(--spacing-1)) 0);
   left: 50%;
-  padding: var(--spacing-2);
+  padding: var(--spacing-1) var(--spacing-2);
   position: absolute;
   transform: translateX(-50%);
   z-index: 1;
