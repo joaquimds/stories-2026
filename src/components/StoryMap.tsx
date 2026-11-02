@@ -12,6 +12,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import type { MapFragment, MapGraph } from '../server/data/map.ts'
 import { ROOT_NAME } from '../lib/site.ts'
 import { ROOT_ID, storyParam } from '../domain/thread.ts'
+import { walkTargets } from '../domain/walk.ts'
 import { last, present } from '../domain/present.ts'
 import styles from './StoryMap.module.css'
 
@@ -32,12 +33,11 @@ type Point = { x: number; y: number }
 type Body = SimulationNodeDatum & { id: number }
 
 // The story the map is showing: its sentences from the root, the
-// permalink of the story up to each, and where each continuation of its
-// last sentence leads
+// permalink of the story up to each, and what each was written after
 export type MapStory = {
   path: number[]
   prefixes: string[]
-  extensions: Record<number, string>
+  pathDefaults: Record<number, number | null>
 }
 
 // Everything loaded so far, one entry per sentence
@@ -373,7 +373,7 @@ export const StoryMap = ({
     setGraph((g) => merge(g, loaded))
   }
 
-  const { path, prefixes, extensions } = story
+  const { path } = story
   // The story is drawn from the earliest of its sentences loaded so far
   let first = path.length - 1
   while (first > 0 && graph.fragments.has(present(path[first - 1]))) {
@@ -395,16 +395,21 @@ export const StoryMap = ({
     return counts
   }, [graph])
 
-  // Where a sentence leads: along the story if it is on it or continues
-  // it, otherwise the story it was written in
-  const target = (fragment: MapFragment) => {
-    const index = path.lastIndexOf(fragment.id)
-    return (
-      (index >= 0 ? prefixes[index] : undefined) ??
-      extensions[fragment.id] ??
-      fragment.origin
-    )
-  }
+  const { prefixes, pathDefaults } = story
+  const targets = useMemo(
+    () =>
+      walkTargets({
+        links: graph.links.values(),
+        defaultParent: (id) =>
+          graph.fragments.get(id)?.defaultParent ?? pathDefaults[id] ?? null,
+        path,
+        prefixes,
+        first,
+      }),
+    [graph, path, prefixes, pathDefaults, first],
+  )
+  const target = (fragment: MapFragment) =>
+    targets.get(fragment.id) ?? fragment.origin
 
   const [size, setSize] = useState(DEFAULT_SIZE)
   // Follows the layout as it settles, until the reader moves around

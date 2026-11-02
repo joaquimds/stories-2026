@@ -1,20 +1,21 @@
 import { sql } from 'kysely'
-import { ROOT_ID, permalink } from '../../domain/thread.ts'
+import { ROOT_ID } from '../../domain/thread.ts'
 import { present } from '../../domain/present.ts'
 import type { Db } from '../db/index.ts'
-import { type ResolvedStory, encodeThreads, pathPermalinks } from './paths.ts'
+import {
+  type ResolvedStory,
+  loadDefaultParents,
+  pathPermalinks,
+} from './paths.ts'
 import { popularOrder, popularityScores } from './rules.ts'
 import { maskContent } from './sentences.ts'
 
-// How much of the graph around a story to load at once
+// How much of the graph around a story to load at once: a step either
+// way from the current sentence, so moving around feels like walking
 export const MAP_LIMITS = {
   // Sentences of the story itself, ending at the current one
   trunk: 5,
-  // Levels loaded beyond the current sentence
-  ahead: 3,
-  // Levels loaded along a branch that leaves the story
-  aside: 2,
-  // Continuations loaded per sentence, the most popular first
+  // Continuations loaded of the current sentence, the most popular first
   children: 8,
   // Sentences loaded that lead into the current one
   parents: 8,
@@ -30,6 +31,9 @@ export type MapFragment = {
   continuations: number
   // The story along the route it was written on
   origin: string
+  // The sentence it was written after, for writing threads; null for a
+  // beginning (and the root)
+  defaultParent: number | null
 }
 
 // A link from one sentence to another; a loop is a link back to a
@@ -67,10 +71,13 @@ const describe = async (db: Db, ids: number[]): Promise<MapFragment[]> => {
     ])
     .where('s.id', 'in', ids)
     .execute()
-  const origins = await pathPermalinks(
-    db,
-    rows.map((r) => r.origin_path_id),
-  )
+  const [origins, defaults] = await Promise.all([
+    pathPermalinks(
+      db,
+      rows.map((r) => r.origin_path_id),
+    ),
+    loadDefaultParents(db, ids),
+  ])
   const byId = new Map(rows.map((r) => [r.id, r]))
   return ids.flatMap((id) => {
     const r = byId.get(id)
@@ -83,6 +90,7 @@ const describe = async (db: Db, ids: number[]): Promise<MapFragment[]> => {
         content: id === ROOT_ID ? '' : maskContent(r.content, r.deleted_at),
         continuations: r.continuations ?? 0,
         origin: origins.get(r.origin_path_id)?.permalink ?? '/',
+        defaultParent: defaults.get(id) ?? null,
       },
     ]
   })
@@ -114,20 +122,10 @@ const collector = () => {
   }
 }
 
-type Frontier = {
-  id: number
-  // The path this route reaches the sentence by, if anyone has used it,
-  // for ranking its continuations as the story page does
-  pathId: number | null
-  // The next sentence along the story, kept first so it is never cut off
-  next?: number
-  levels: number
-}
-
-// The graph around a story: its last few sentences, the branches leaving
-// them, what lies a few steps ahead, and everything that leads into the
-// current sentence. Each sentence appears once; a route that comes back to
-// one already found shows as a link to it.
+// The graph around a story: its last few sentences, then one step either
+// way from the current one, everything it leads to and everything leading
+// into it. Each sentence appears once; a route that comes back to one
+// already found shows as a link to it.
 export const getStoryMap = async (
   db: Db,
   story: ResolvedStory,
@@ -143,87 +141,32 @@ export const getStoryMap = async (
     }
   }
 
-  // Branches leave each of the story's sentences, and the last one is
-  // followed further ahead
-  let frontier: Frontier[] = all.slice(start).map((id, offset) => {
-    const i = start + offset
-    const last = i === all.length - 1
-    return {
-      id,
-      pathId: story.pathIds[i] ?? null,
-      next: last ? undefined : all[i + 1],
-      levels: last ? limits.ahead : limits.aside,
+  // One step on from the current sentence, ranked as on the story page
+  const current = present(all.at(-1))
+  const { rows } = await sql<{ sentence_id: number }>`
+    with recursive ${popularityScores(sql`
+      select 0 as grp, ${story.pathIds.at(-1) ?? null}::bigint as parent_path,
+        l.to_sentence_id as sentence_id
+      from app.links l
+      join app.sentences s on s.id = l.to_sentence_id
+      where l.from_sentence_id = ${current} and s.deleted_at is null
+    `)}
+    select cand.sentence_id
+    from cand
+    left join scores using (grp, sentence_id)
+    order by ${popularOrder}
+  `.execute(db)
+  for (const { sentence_id: id } of rows.slice(0, limits.children)) {
+    if (!found.has(id) && found.ids.length >= limits.fragments) {
+      break
     }
-  })
-  const explored = new Set<number>()
-
-  while (frontier.length && found.ids.length < limits.fragments) {
-    const { rows } = await sql<{
-      grp: number
-      sentence_id: number
-      path_id: number | null
-    }>`
-      with recursive ${popularityScores(sql`
-        select f.grp, f.parent_path, l.to_sentence_id as sentence_id
-        from unnest(
-          ${frontier.map((_, i) => i)}::int[],
-          ${frontier.map((f) => f.id)}::bigint[],
-          ${frontier.map((f) => f.pathId)}::bigint[]
-        ) as f(grp, sentence, parent_path)
-        join app.links l on l.from_sentence_id = f.sentence
-        join app.sentences s on s.id = l.to_sentence_id
-        where s.deleted_at is null
-      `)}
-      select cand.grp, cand.sentence_id, step.id as path_id
-      from cand
-      left join scores using (grp, sentence_id)
-      left join app.paths step
-        on step.parent_id = cand.parent_path
-        and step.sentence_id = cand.sentence_id
-      order by cand.grp, ${popularOrder}
-    `.execute(db)
-    const continuations = frontier.map(
-      (): { id: number; pathId: number | null }[] => [],
-    )
-    for (const row of rows) {
-      continuations[row.grp]?.push({ id: row.sentence_id, pathId: row.path_id })
-    }
-
-    const next: Frontier[] = []
-    for (const [index, item] of frontier.entries()) {
-      explored.add(item.id)
-      const children = continuations[index] ?? []
-      const ordered =
-        item.next === undefined
-          ? children
-          : [
-              ...children.filter((c) => c.id === item.next),
-              ...children.filter((c) => c.id !== item.next),
-            ]
-      for (const child of ordered.slice(0, limits.children)) {
-        if (!found.has(child.id) && found.ids.length >= limits.fragments) {
-          break
-        }
-        found.link(item.id, child.id)
-        if (found.has(child.id)) {
-          continue
-        }
-        found.add(child.id)
-        if (item.levels > 1 && !explored.has(child.id)) {
-          next.push({
-            id: child.id,
-            pathId: child.pathId,
-            levels: item.levels - 1,
-          })
-        }
-      }
-    }
-    frontier = next
+    found.link(current, id)
+    found.add(id)
   }
 
-  // What leads into the current sentence: the story's previous sentence
-  // first, so it is never cut off, then the rest by when they were linked
-  const current = present(all.at(-1))
+  // One step back: what leads into the current sentence, the story's
+  // previous sentence first so it is never cut off, then the rest by when
+  // they were linked
   const previous = all.at(-2)
   const leadingIn = await db
     .selectFrom('links as l')
@@ -249,21 +192,4 @@ export const getStoryMap = async (
     fragments: await describe(db, found.ids),
     links: found.links,
   }
-}
-
-// The story followed on to each continuation of its last sentence
-export const extensionPermalinks = async (
-  db: Db,
-  story: ResolvedStory,
-  graph: MapGraph,
-): Promise<Record<number, string>> => {
-  const last = story.sentenceIds.at(-1)
-  const next = graph.links.filter((l) => l.from === last).map((l) => l.to)
-  const threads = await encodeThreads(
-    db,
-    next.map((id) => [...story.sentenceIds, id]),
-  )
-  return Object.fromEntries(
-    next.map((id, i) => [id, permalink(present(threads[i]))]),
-  )
 }

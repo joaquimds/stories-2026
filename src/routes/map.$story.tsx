@@ -18,7 +18,7 @@ export const Route = createFileRoute('/map/$story')({
 })
 
 function MapPage() {
-  const { graph, path, prefixes, extensions, permalink, title } =
+  const { graph, path, prefixes, pathDefaults, permalink, title } =
     Route.useLoaderData()
   return (
     <div className={styles.page}>
@@ -26,7 +26,7 @@ function MapPage() {
           story's book, with the story's title inside it */}
       <StoryMap
         graph={graph}
-        story={{ path, prefixes, extensions }}
+        story={{ path, prefixes, pathDefaults }}
         title={title}
         tab={
           <Link to={permalink} className="book-tab">

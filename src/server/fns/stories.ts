@@ -8,8 +8,8 @@ import { clientIp, currentUser } from '../auth/request.ts'
 import { db } from '../db/index.ts'
 import { setLike } from '../data/likes.ts'
 import { linkSentence, unlinkSentence } from '../data/links.ts'
-import { resolveStory } from '../data/paths.ts'
-import { extensionPermalinks, getStoryMap } from '../data/map.ts'
+import { loadDefaultParents, resolveStory } from '../data/paths.ts'
+import { getStoryMap } from '../data/map.ts'
 import { randomStory } from '../data/random.ts'
 import { reportSentence } from '../data/reports.ts'
 import {
@@ -146,11 +146,14 @@ export const getMap = createServerFn({ method: 'GET' })
     for (const line of view.lines) {
       prefixes[line.index] = line.permalink
     }
+    // What each of the story's sentences was written after, for writing
+    // the threads of routes onwards from it
+    const defaults = await loadDefaultParents(database, resolved.sentenceIds)
     return {
       graph,
       path: resolved.sentenceIds,
       prefixes,
-      extensions: await extensionPermalinks(database, resolved, graph),
+      pathDefaults: Object.fromEntries(defaults),
       permalink: view.permalink,
       title: view.title,
     }

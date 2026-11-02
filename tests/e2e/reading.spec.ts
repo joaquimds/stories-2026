@@ -221,7 +221,7 @@ test('loads what leads into the earliest sentence on a map', async ({
   // Clicking the earliest moves there, like any dot, and loads what leads
   // into it, losing nothing already on the map
   const url = page.url()
-  await map.getByRole('link', { name: /In the garden/ }).click()
+  await map.getByRole('link', { name: /She took the left path/ }).click()
   await expect(beginning).toHaveCount(1)
   await expect(page).not.toHaveURL(url)
   await expect(map.getByRole('link', { name: /Neither of them/ })).toHaveCount(

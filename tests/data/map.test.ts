@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { present } from '../../src/domain/present.ts'
 import { setLike } from '../../src/server/data/likes.ts'
 import { linkSentence } from '../../src/server/data/links.ts'
-import {
-  type MapGraph,
-  extensionPermalinks,
-  getStoryMap,
-} from '../../src/server/data/map.ts'
+import { type MapGraph, getStoryMap } from '../../src/server/data/map.ts'
 import { getChildren } from '../../src/server/data/stories.ts'
 import {
   createUser,
@@ -18,8 +14,6 @@ import {
 
 const limits = {
   trunk: 3,
-  ahead: 2,
-  aside: 1,
   children: 2,
   parents: 8,
   fragments: 50,
@@ -45,14 +39,14 @@ const view = (graph: MapGraph) => {
 
 describe('getStoryMap', () => {
   it(
-    'shows the end of the story, its branches, and what lies ahead',
+    'shows the end of the story and one step either way from where you are',
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [, b, c, d] = await writeChain(trx, ana, null, 'A', 'B', 'C', 'D')
-      // A branch off the story, which itself continues
-      await writeChain(trx, ana, b, 'C2', 'C2-next')
-      // Ahead of D: three continuations, one three levels deep
-      await writeChain(trx, ana, d, 'E', 'F', 'G')
+      // A branch off the story, not shown until you walk there
+      await writeChain(trx, ana, b, 'C2')
+      // Ahead of D: three continuations, one of them going further
+      await writeChain(trx, ana, d, 'E', 'F')
       await writeChain(trx, ana, d, 'E2')
       await writeChain(trx, ana, d, 'E3')
 
@@ -61,19 +55,18 @@ describe('getStoryMap', () => {
 
       // The trunk is the last three sentences: B, C, D
       expect(byContent('A')).toBeUndefined()
-      expect(after('B')).toEqual(['C', 'C2'])
+      expect(after('B')).toEqual(['C'])
       expect(byContent('C')?.origin).toBe(`/s/${c}`)
-      // The branch off the story shows one level
-      expect(byContent('C2')).toMatchObject({ continuations: 1 })
-      expect(byContent('C2-next')).toBeUndefined()
-      // Ahead: two of the three continuations, then one more level
+      expect(byContent('C2')).toBeUndefined()
+      // One step ahead: two of the three continuations, no further
       expect(after('D')).toEqual(['E', 'E2'])
       expect(byContent('D')).toMatchObject({ continuations: 3 })
-      expect(after('E')).toEqual(['F'])
-      expect(byContent('F')).toMatchObject({ continuations: 1 })
-      expect(byContent('G')).toBeUndefined()
+      expect(byContent('F')).toBeUndefined()
+      expect(byContent('E')).toMatchObject({ continuations: 1 })
       // Endings have no continuations at all
       expect(byContent('E2')).toMatchObject({ continuations: 0 })
+      // What each was written after, for writing threads
+      expect(byContent('C')?.defaultParent).toBe(leafOf(b))
     }),
   )
 
@@ -150,20 +143,6 @@ describe('getStoryMap', () => {
         id: 0,
         content: '',
         origin: '/',
-      })
-    }),
-  )
-
-  it(
-    'follows the story on to each continuation of its last sentence',
-    rollback(async (trx) => {
-      const ana = await createUser(trx)
-      const [a] = await writeChain(trx, ana, null, 'A')
-      const [b] = await writeChain(trx, ana, a, 'B')
-      const story = await resolved(trx, a)
-      const graph = await getStoryMap(trx, story, limits)
-      expect(await extensionPermalinks(trx, story, graph)).toEqual({
-        [leafOf(b)]: `/s/${b}`,
       })
     }),
   )

@@ -31,20 +31,20 @@ decided against.
   one dot per sentence and a line per link with an arrowhead where it
   arrives (one line with an arrowhead at each end when two sentences link
   each other), so loops show as lines leading back to a dot
-  already there. It loads the story's last few sentences, the branches
-  leaving them and a few levels ahead, ranked as on the story page, plus
-  every sentence leading into the current one (one level back, the story's
-  previous sentence first, then by when they were linked), and
-  grows as you explore: clicking a dot (or a second tap; Enter from the
-  keyboard) moves along the map, adding what lies beyond without
-  rebuilding it, and the camera glides there. The earliest of the story's
-  sentences shown is blue until the map reaches the beginning (the root,
-  green); moving there, like moving anywhere, loads what leads into it.
-  Endings
-  are red, outlined off the story. Pointing at a dot (or a first tap, or
-  focus) shows its sentence in a popover, whose text opens a story: the
-  current one up to that sentence if it is on it, the current one
-  followed on if it continues it, otherwise the story it was written in.
+  already there. Moving around it is walking. Each move loads the story's
+  last few sentences and one step either way from where you are: what it
+  leads to (ranked as on the story page) and everything leading into it
+  (the story's previous sentence first, then by when they were linked).
+  Clicking a dot (or a second tap; Enter from the keyboard) moves there,
+  adding to the map without rebuilding it, and the camera glides there. A
+  dot on the story goes back to that point on it; any other goes on along
+  the shortest route loaded from the latest point on the story that has
+  one, so the story so far is kept (`src/domain/walk.ts`); only a dot with
+  no route falls back to the story it was written in. A popover's text
+  opens the same story its dot does. The earliest of the story's sentences
+  shown is blue until the map reaches the beginning (the root, green).
+  Endings are red, outlined off the story. Pointing at a dot (or a first
+  tap, or focus) shows its sentence in a popover.
   "+N" counts continuations not loaded yet. Laid out live by d3-force:
   springs along links, dots pushed apart, a gentle pull to the middle;
   new dots start beside their neighbours and placed ones stay put. Drag to
