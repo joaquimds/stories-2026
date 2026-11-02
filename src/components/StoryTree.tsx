@@ -43,12 +43,12 @@ export const StoryTree = ({
         <div className={`${styles.content} ${styles.page}`}>
           {story.isRoot ? (
             <p className={`${styles.begin} aside`}>
-              (choose a beginning, start a new story, visit the{' '}
-              <Link to="/library">library</Link> or the{' '}
+              (choose a beginning, start a new story, or visit the{' '}
+              <Link to="/library">library</Link>, the{' '}
               <Link to="/map/$story" params={{ story: ROOT_THREAD }}>
                 map
               </Link>
-              , or read a <RandomLink>random</RandomLink> story)
+              , or a <RandomLink>random</RandomLink> story)
             </p>
           ) : (
             <StoryText story={story} user={user} />
@@ -80,8 +80,8 @@ export const StoryTree = ({
             <p className={`${styles.end} aside`}>
               {story.isRoot ? null : (
                 <>
-                  (tale&apos;s end; write more, link to another, or{' '}
-                  <RandomLink>read a random story</RandomLink>)
+                  (tale&apos;s end; write more, link to another, or read a{' '}
+                  <RandomLink>random</RandomLink> story)
                 </>
               )}
             </p>
