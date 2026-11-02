@@ -23,8 +23,8 @@ decided against.
   lists up to five, each opening that version of the story, with a link to
   all of them. Counts printed inline were rejected as breaking up the prose,
   and the actions row is unchanged. The opening sentence has none.
-- **Map** (`/map/<story>`, linked as "(map)" opposite the story's title, as the
-  map links "(back to the story)" opposite its own): the graph around a story,
+- **Map** (`/map/<story>`, linked as "(map)" at the foot of the story's page,
+  centred): the graph around a story,
   one dot per sentence and a line per link with an arrowhead where it
   arrives (one line with an arrowhead at each end when two sentences link
   each other), so loops show as lines leading back to a dot

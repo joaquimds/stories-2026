@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ROOT_THREAD } from '../domain/thread.ts'
+import { ROOT_THREAD, storyParam } from '../domain/thread.ts'
 import type { Page } from '../domain/pagination.ts'
 import type { Order } from '../domain/pagination.ts'
 import type { StorySearch } from '../domain/search.ts'
@@ -54,6 +54,16 @@ export const StoryTree = ({
             <StoryText story={story} user={user} />
           )}
         </div>
+        {story.isRoot ? null : (
+          <p className={styles['map-link']}>
+            <Link
+              to="/map/$story"
+              params={{ story: storyParam(story.permalink) }}
+            >
+              (map)
+            </Link>
+          </p>
+        )}
       </div>
       <div className={`${styles.half} ${styles.bottom}`}>
         <div className={styles.content}>

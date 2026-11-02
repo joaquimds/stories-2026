@@ -45,6 +45,12 @@
   text-align: center;
 }
 
+/* At the foot of the story's page */
+.map-link {
+  padding: 0 var(--spacing-2) var(--spacing-2);
+  text-align: center;
+}
+
 .content {
   display: flex;
   flex-direction: column;

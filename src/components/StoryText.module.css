@@ -107,8 +107,3 @@
 .download {
   margin-left: var(--spacing-1);
 }
-
-/* Spaced like a title on its own */
-.heading {
-  margin-bottom: var(--spacing-0);
-}

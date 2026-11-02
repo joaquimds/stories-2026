@@ -10,7 +10,7 @@ import {
   title,
   unlink,
 } from '../server/fns/stories.ts'
-import { ROOT_THREAD, storyParam } from '../domain/thread.ts'
+import { ROOT_THREAD } from '../domain/thread.ts'
 import type { Result } from '../domain/errors.ts'
 import { Authors } from './Authors.tsx'
 import styles from './StoryText.module.css'
@@ -110,12 +110,7 @@ export const StoryText = ({ story, user }: Props) => {
 
   return (
     <>
-      <div className={`title-row ${styles.heading}`}>
-        {story.title ? <h1>{story.title}</h1> : null}
-        <Link to="/map/$story" params={{ story: storyParam(story.permalink) }}>
-          (map)
-        </Link>
-      </div>
+      {story.title ? <h1>{story.title}</h1> : null}
       {lines.map((line, i) => (
         <div key={`${i}-${line.id}`} className={styles.content}>
           {editing?.index === line.index ? (
