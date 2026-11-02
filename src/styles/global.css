@@ -106,6 +106,22 @@ a {
   text-decoration: underline;
 }
 
+/* A tab at the foot of the book, over the fold between its pages, linking
+   the story and its map: card-like, with no bottom edge of its own so it
+   rises from the book's */
+.book-tab {
+  background: var(--color-white);
+  border-radius: var(--spacing-1) var(--spacing-1) 0 0;
+  bottom: 0;
+  box-shadow: var(--card-shadow);
+  clip-path: inset(calc(-2 * var(--spacing-1)) calc(-2 * var(--spacing-1)) 0);
+  left: 50%;
+  padding: var(--spacing-2);
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
 /* Buttons */
 
 button {

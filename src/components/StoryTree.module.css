@@ -1,5 +1,6 @@
 .container {
   border-radius: var(--spacing-1);
+  position: relative;
   box-shadow: var(--card-shadow);
   display: flex;
   flex-direction: column;
@@ -42,12 +43,6 @@
 }
 
 .begin {
-  text-align: center;
-}
-
-/* At the foot of the story's page */
-.map-link {
-  padding: 0 var(--spacing-2) var(--spacing-2);
   text-align: center;
 }
 

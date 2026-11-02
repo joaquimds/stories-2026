@@ -24,10 +24,17 @@ function MapPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1>{title ? `Map of ${title}` : 'Map'}</h1>
-        <Link to={permalink}>(back to the story)</Link>
       </div>
       {/* One map that grows as you move around it */}
-      <StoryMap graph={graph} story={{ path, prefixes, extensions }} />
+      <StoryMap
+        graph={graph}
+        story={{ path, prefixes, extensions }}
+        tab={
+          <Link to={permalink} className="book-tab">
+            (story)
+          </Link>
+        }
+      />
     </div>
   )
 }

@@ -54,16 +54,6 @@ export const StoryTree = ({
             <StoryText story={story} user={user} />
           )}
         </div>
-        {story.isRoot ? null : (
-          <p className={styles['map-link']}>
-            <Link
-              to="/map/$story"
-              params={{ story: storyParam(story.permalink) }}
-            >
-              (map)
-            </Link>
-          </p>
-        )}
       </div>
       <div className={`${styles.half} ${styles.bottom}`}>
         <div className={styles.content}>
@@ -107,6 +97,13 @@ export const StoryTree = ({
           <Write story={story} user={user} search={search} link={link} />
         </div>
       </div>
+      <Link
+        to="/map/$story"
+        params={{ story: storyParam(story.permalink) }}
+        className="book-tab"
+      >
+        (map)
+      </Link>
     </div>
   )
 }

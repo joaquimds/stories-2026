@@ -8,7 +8,7 @@ import {
   forceX,
   forceY,
 } from 'd3-force'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import type { MapFragment, MapGraph } from '../server/data/map.ts'
 import { ROOT_NAME } from '../lib/site.ts'
 import { ROOT_ID, storyParam } from '../domain/thread.ts'
@@ -355,9 +355,12 @@ const sentence = (fragment: MapFragment) =>
 export const StoryMap = ({
   graph: loaded,
   story,
+  tab,
 }: {
   graph: MapGraph
   story: MapStory
+  // The tab at the foot of the map, back to the story
+  tab?: ReactNode
 }) => {
   const [graph, setGraph] = useState(() => merge(EMPTY, loaded))
   // New data for the map arrives as you move around it
@@ -760,6 +763,7 @@ export const StoryMap = ({
           ) : null}
         </div>
       ) : null}
+      {tab}
     </div>
   )
 }

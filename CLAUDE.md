@@ -28,8 +28,8 @@ been built and decided.
   still say sentence).
 - Parentheses are the site's quiet narrator voice: lowercase asides that
   stand in where content is missing ("(no results)", "(reported)", "(tale's
-  end; …)", "(the beginning)" for the root), gentle links ("(back to the
-  story)", "(previous)", "(next)") and small notes. One clause each; join
+  end; …)", "(the beginning)" for the root), gentle links ("(map)" and
+  "(story)", "(previous)", "(next)") and small notes. One clause each; join
   clauses with a semicolon. Procedural messages, such as "Please check your
   email for further instructions.", are plain sentences.
 - Errors people can meet in normal use are friendly ("Wrong email or
