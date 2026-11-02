@@ -27,6 +27,10 @@ export const THREAD_PATTERN = new RegExp(`^${ID}(\\.${ID}-${ID})*$`)
 export const permalink = (thread: string, slug?: string | null) =>
   thread === ROOT_THREAD && !slug ? '/' : `/s/${slug ?? thread}`
 
+// The story part of a permalink, for the map and share image routes
+export const storyParam = (link: string) =>
+  link === '/' ? ROOT_THREAD : link.replace(/^\/s\//, '')
+
 // Guards against pathological threads; far beyond any real story
 export const MAX_THREAD_LENGTH = 10_000
 

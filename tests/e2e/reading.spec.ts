@@ -172,6 +172,8 @@ test('gives stories their own share image', async ({ page, request }) => {
 })
 
 test('maps the branches around a story', async ({ page }) => {
+  // The layout settles at once, so the dots hold still to be clicked
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/s/The_Bridge')
   await page.getByRole('link', { name: 'map', exact: true }).click()
   await expect(page).toHaveURL('/map/The_Bridge')
@@ -180,7 +182,17 @@ test('maps the branches around a story', async ({ page }) => {
   ).toBeVisible()
   const map = page.getByRole('img', { name: "Map of the story's branches" })
   await expect(map).toBeVisible()
-  // The clearing was linked after the bridge
+  // A dot opens the map around it (the clearing was linked after the
+  // bridge)
   await map.getByRole('link', { name: /At the clearing/ }).click()
+  await expect(page).toHaveURL(/\/map\/\d+\.\d+-\d+$/)
+  // The sentence in its popover opens the story: focus a dot, then Tab to
+  // its sentence
+  await map.getByRole('link', { name: /At the clearing/ }).focus()
+  await page.keyboard.press('Tab')
+  await expect(
+    page.getByRole('tooltip').getByRole('link', { name: /At the clearing/ }),
+  ).toBeFocused()
+  await page.keyboard.press('Enter')
   await expect(page).toHaveURL(/\/s\/\d+\.\d+-\d+$/)
 })

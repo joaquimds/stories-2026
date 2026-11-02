@@ -46,6 +46,11 @@ describe('getStoryMap', () => {
       expect(byContent('D')?.more).toBe(1)
       expect(byContent('F')).toMatchObject({ depth: 4, more: 1 })
       expect(byContent('G')).toBeUndefined()
+      // Endings: only fragments nothing continues, not ones the map cuts off
+      expect(byContent('E2')).toMatchObject({ ending: true })
+      expect(byContent('F')).toMatchObject({ ending: false })
+      expect(byContent('C2')).toMatchObject({ ending: false })
+      expect(byContent('D')).toMatchObject({ ending: false })
     }),
   )
 

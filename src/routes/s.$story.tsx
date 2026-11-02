@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { StoryTree } from '../components/StoryTree.tsx'
 import { storySearchSchema } from '../domain/search.ts'
-import { ROOT_THREAD } from '../domain/thread.ts'
+import { ROOT_THREAD, storyParam } from '../domain/thread.ts'
 import { SITE_DESCRIPTION, SITE_TITLE } from '../lib/site.ts'
 import { getStoryPage } from '../server/fns/stories.ts'
 
@@ -25,7 +25,7 @@ export const Route = createFileRoute('/s/$story')({
     const description =
       story.lines.find((l) => !l.deleted)?.content ?? SITE_DESCRIPTION
     const url = `${siteUrl}${story.permalink}`
-    const image = `${siteUrl}/og/${encodeURIComponent(story.permalink.replace(/^\/s\//, ''))}`
+    const image = `${siteUrl}/og/${encodeURIComponent(storyParam(story.permalink))}`
     return {
       meta: [
         { title },

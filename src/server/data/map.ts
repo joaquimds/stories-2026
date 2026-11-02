@@ -32,6 +32,8 @@ export type MapNode = {
   loop: boolean
   // Continuations not shown
   more: number
+  // Nothing continues it: a tale's end
+  ending: boolean
 }
 
 type Pending = {
@@ -92,6 +94,7 @@ export const getStoryMap = async (
       current: trunk.length === 1,
       loop: false,
       more: 0,
+      ending: false,
     },
     [first],
   )
@@ -142,6 +145,7 @@ export const getStoryMap = async (
     const next: Pending[] = []
     for (const [index, { node, ids, budget }] of frontier.entries()) {
       const children = continuations[index] ?? []
+      node.ending = children.length === 0
       if (budget <= 0 || node.loop) {
         node.more = children.length
         continue
@@ -176,6 +180,7 @@ export const getStoryMap = async (
             current,
             loop: ids.includes(id),
             more: 0,
+            ending: false,
           },
           childIds,
         )

@@ -10,7 +10,7 @@ import {
   title,
   unlink,
 } from '../server/fns/stories.ts'
-import { ROOT_THREAD } from '../domain/thread.ts'
+import { ROOT_THREAD, storyParam } from '../domain/thread.ts'
 import type { Result } from '../domain/errors.ts'
 import { Authors } from './Authors.tsx'
 import styles from './StoryText.module.css'
@@ -327,7 +327,7 @@ export const StoryText = ({ story, user }: Props) => {
         </a>
         <Link
           to="/map/$story"
-          params={{ story: story.permalink.replace(/^\/s\//, '') }}
+          params={{ story: storyParam(story.permalink) }}
           className={styles.map}
         >
           map

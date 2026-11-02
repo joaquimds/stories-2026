@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapNode } from '../server/data/map.ts'
 import { ROOT_NAME } from '../lib/site.ts'
+import { storyParam } from '../domain/thread.ts'
 import styles from './StoryMap.module.css'
 
 // The distance each step along a story is pulled out from the centre
@@ -80,32 +81,101 @@ const framing = (
   return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, scale }
 }
 
+// Dark on the story being read, faded off it; the centre green and tales'
+// ends red
+const dotClass = (node: MapNode) =>
+  [
+    styles.dot,
+    node.onStory ? styles['dot-story'] : '',
+    node.parent === null ? styles['dot-start'] : '',
+    node.ending ? styles['dot-end'] : '',
+  ].join(' ')
+
 const sentence = (node: MapNode) =>
   node.sentenceId === 0 ? ROOT_NAME : node.content
+
+// Where each sentence starts: on the ring for its depth, in a slice of the
+// circle shared among its parent's continuations by how many branch tips
+// each leads to. The physics then only has to settle it. Rounded so the
+// server and the browser draw the same first frame.
+const startingPositions = (nodes: MapNode[]) => {
+  const children = new Map<string | null, MapNode[]>()
+  for (const node of nodes) {
+    children.set(node.parent, [...(children.get(node.parent) ?? []), node])
+  }
+  const tips = new Map<string, number>()
+  const countTips = (node: MapNode): number => {
+    const below = children.get(node.key) ?? []
+    const count = below.length
+      ? below.reduce((sum, child) => sum + countTips(child), 0)
+      : 1
+    tips.set(node.key, count)
+    return count
+  }
+  const positions = new Map<string, Point>()
+  const place = (node: MapNode, from: number, to: number) => {
+    const angle = (from + to) / 2
+    const radius = node.depth * RING
+    positions.set(node.key, {
+      x: Math.round(radius * Math.cos(angle) * 100) / 100,
+      y: Math.round(radius * Math.sin(angle) * 100) / 100,
+    })
+    let start = from
+    for (const child of children.get(node.key) ?? []) {
+      const span =
+        ((to - from) * (tips.get(child.key) ?? 1)) / (tips.get(node.key) ?? 1)
+      place(child, start, start + span)
+      start += span
+    }
+  }
+  for (const centre of children.get(null) ?? []) {
+    countTips(centre)
+    place(centre, -Math.PI / 2, (3 * Math.PI) / 2)
+  }
+  return positions
+}
 
 // Runs the physics that lays out the map: sentences pulled out to a ring
 // for their depth, held to their continuations by springs, pushed apart
 // from each other, and kept from overlapping. The first sentence is
-// pinned at the centre; everything starts there and spreads out.
+// pinned at the centre; the rest start near where they'll settle.
+//
+// It restarts only when the tree itself changes, not whenever the same
+// data arrives again (as it does after a preload), and then keeps the
+// sentences it already placed where they are.
 const useForceLayout = (nodes: MapNode[]) => {
-  const [positions, setPositions] = useState(
-    () => new Map<string, Point>(nodes.map((n) => [n.key, { x: 0, y: 0 }])),
-  )
+  const [positions, setPositions] = useState(() => startingPositions(nodes))
+  const shape = nodes.map((n) => `${n.key}<${n.parent ?? ''}`).join(' ')
+  const latest = useRef(nodes)
   useEffect(() => {
-    const bodies: Body[] = nodes.map((node) => ({
-      key: node.key,
-      depth: node.depth,
-      x: (Math.random() - 0.5) * 20,
-      y: (Math.random() - 0.5) * 20,
-      ...(node.parent === null ? { fx: 0, fy: 0 } : {}),
-    }))
+    latest.current = nodes
+  })
+  // Where everything was, kept for when the tree changes
+  const placed = useRef(new Map<string, Point>())
+  useEffect(() => {
+    const nodes = latest.current
+    const kept = placed.current
+    const start = startingPositions(nodes)
+    const bodies: Body[] = nodes.map((node) => {
+      const at = kept.get(node.key) ?? start.get(node.key) ?? { x: 0, y: 0 }
+      return {
+        key: node.key,
+        depth: node.depth,
+        x: at.x,
+        y: at.y,
+        ...(node.parent === null ? { fx: 0, fy: 0 } : {}),
+      }
+    })
     const links = nodes.flatMap((node) =>
       node.parent ? [{ source: node.parent, target: node.key }] : [],
     )
-    const publish = () =>
-      setPositions(
-        new Map(bodies.map((b) => [b.key, { x: b.x ?? 0, y: b.y ?? 0 }])),
+    const publish = () => {
+      const at = new Map(
+        bodies.map((b) => [b.key, { x: b.x ?? 0, y: b.y ?? 0 }]),
       )
+      placed.current = at
+      setPositions(at)
+    }
     const simulation = forceSimulation(bodies)
       .force(
         'links',
@@ -117,6 +187,9 @@ const useForceLayout = (nodes: MapNode[]) => {
       .force('repel', forceManyBody<Body>().strength(-260))
       .force('rings', forceRadial<Body>((b) => b.depth * RING).strength(0.5))
       .force('collide', forceCollide<Body>(20))
+      // Starting close to the end, with more damping, it eases into place
+      .alpha(kept.size ? 0.2 : 0.5)
+      .velocityDecay(0.6)
     const reduceMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches
@@ -129,7 +202,7 @@ const useForceLayout = (nodes: MapNode[]) => {
     return () => {
       simulation.stop()
     }
-  }, [nodes])
+  }, [shape])
   return positions
 }
 
@@ -146,6 +219,7 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
   const [hovered, setHovered] = useState<string | null>(null)
   const pointerType = useRef<string>('mouse')
   const pressing = useRef(false)
+  const popoverLink = useRef<HTMLAnchorElement>(null)
   // The popover closes a moment after the pointer leaves, so it can be
   // reached from its dot
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -367,22 +441,32 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
                 }
               }}
               onBlur={hideSoon}
+              onKeyDown={(event) => {
+                // Tab moves from a dot to its sentence's link to the story
+                if (
+                  event.key === 'Tab' &&
+                  !event.shiftKey &&
+                  hovered === node.key &&
+                  popoverLink.current
+                ) {
+                  event.preventDefault()
+                  popoverLink.current.focus()
+                }
+              }}
             >
               {node.current ? (
                 <circle r={10 / camera.scale} className={styles.ring} />
               ) : null}
-              <circle
-                r={5 / camera.scale}
-                className={node.onStory ? styles['dot-story'] : styles.dot}
-              />
+              <circle r={5 / camera.scale} className={dotClass(node)} />
               <Link
-                to={node.permalink}
+                to="/map/$story"
+                params={{ story: storyParam(node.permalink) }}
                 aria-label={sentence(node)}
                 className={styles.target}
                 onClick={(event) => {
                   pressing.current = false
                   // On touch screens, the first tap shows the sentence and
-                  // a second opens it
+                  // a second opens the map around it
                   if (pointerType.current === 'touch' && hovered !== node.key) {
                     event.preventDefault()
                     show(node.key)
@@ -402,13 +486,15 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
           role="tooltip"
           style={popover.style}
           onPointerEnter={() => clearTimeout(hideTimer.current)}
+          onFocus={() => clearTimeout(hideTimer.current)}
+          onBlur={hideSoon}
           onPointerLeave={(event) => {
             if (event.pointerType === 'mouse') {
               hideSoon()
             }
           }}
         >
-          <Link to={popover.node.permalink} tabIndex={-1}>
+          <Link ref={popoverLink} to={popover.node.permalink}>
             {sentence(popover.node)}
           </Link>
           {popover.node.loop || popover.node.more ? (

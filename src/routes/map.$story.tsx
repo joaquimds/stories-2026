@@ -25,7 +25,9 @@ function MapPage() {
         <h1>{title ? `Map of ${title}` : 'Map'}</h1>
         <Link to={permalink}>(back to the story)</Link>
       </div>
-      <StoryMap nodes={nodes} />
+      {/* A fresh map for each story; the same story's data arriving again
+          keeps it */}
+      <StoryMap key={permalink} nodes={nodes} />
     </div>
   )
 }

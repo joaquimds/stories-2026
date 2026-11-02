@@ -57,6 +57,22 @@
 
 .dot-story {
   fill: var(--color-black);
+  stroke: var(--color-black);
+}
+
+/* Where the map starts */
+.dot-start {
+  fill: var(--color-green);
+  stroke: var(--color-green);
+}
+
+/* A tale's end: outlined off the story, filled on it */
+.dot-end {
+  stroke: var(--color-red);
+
+  &.dot-story {
+    fill: var(--color-red);
+  }
 }
 
 .ring {

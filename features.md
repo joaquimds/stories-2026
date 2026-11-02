@@ -24,15 +24,20 @@ decided against.
   all of them. Counts printed inline were rejected as breaking up the prose,
   and the actions row is unchanged. The opening sentence has none.
 - **Map** (`/map/<story>`, linked as "map"): the story and the paths around
-  it, laid out live by a d3-force simulation that settles differently each
-  time: sentences are pulled out from the centre by depth, held to their
-  continuations by springs, pushed apart and kept from overlapping. The
-  story is dark and the reader's position ringed. Where a sentence has more
-  continuations than fit, the most popular are shown, ranked exactly as on
-  the story page. Pointing at a sentence
-  (or a first tap on touch screens) shows it in full in a popover, which
-  opens it when clicked. Drag to pan, scroll or buttons to zoom. How to read it is in
-  the FAQ rather than on the page.
+  it, laid out live by a d3-force simulation: sentences are pulled out from
+  the centre by depth, held to their continuations by springs, pushed apart
+  and kept from overlapping. Each sentence starts near where it will
+  settle (on its depth's ring, in a slice of the circle sized by the
+  branches below it), so the map eases into place rather than bursting out
+  of the centre. The layout restarts only when the tree changes, not when
+  the same data arrives again after a preload. The story is dark, the
+  reader's position ringed, the centre green and tales' ends red (outlined
+  off the story). Where a sentence has more continuations than fit, the
+  most popular are shown, ranked exactly as on the story page. Pointing at
+  a dot (or a first tap on touch screens, or keyboard focus) shows the
+  sentence in a popover; clicking the dot (or a second tap) opens the map
+  around it, and clicking the sentence opens its story. Drag to pan, scroll
+  or buttons to zoom. How to read it is in the FAQ rather than on the page.
 - **Share images** (`/og/<story>`): each story's link preview shows its title
   and opening in EB Garamond. The SVG is laid out by hand, wrapping text
   with glyph widths read from the font file, and drawn to PNG by resvg, the
