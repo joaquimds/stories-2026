@@ -9,7 +9,7 @@ import { db } from '../db/index.ts'
 import { setLike } from '../data/likes.ts'
 import { linkSentence, unlinkSentence } from '../data/links.ts'
 import { resolveStory } from '../data/paths.ts'
-import { getStoryMap } from '../data/map.ts'
+import { extensionPermalinks, getMapAbove, getStoryMap } from '../data/map.ts'
 import { randomStory } from '../data/random.ts'
 import { reportSentence } from '../data/reports.ts'
 import {
@@ -127,7 +127,8 @@ export const getRandomStory = createServerFn({ method: 'GET' }).handler(() =>
   randomStory(db()),
 )
 
-// The tree around a story, for the map
+// The graph around a story, for the map: its sentences and links, the
+// story's own sentences, and where each step along it leads
 export const getMap = createServerFn({ method: 'GET' })
   .validator(z.object({ story }))
   .handler(async ({ data }) => {
@@ -136,9 +137,26 @@ export const getMap = createServerFn({ method: 'GET' })
     if (!resolved) {
       throw notFound()
     }
-    const [nodes, view] = await Promise.all([
+    const [graph, view] = await Promise.all([
       getStoryMap(database, resolved),
       getStory(database, null, resolved),
     ])
-    return { nodes, permalink: view.permalink, title: view.title }
+    // The story up to each of its sentences; the root's is the home page
+    const prefixes = resolved.sentenceIds.map(() => '/')
+    for (const line of view.lines) {
+      prefixes[line.index] = line.permalink
+    }
+    return {
+      graph,
+      path: resolved.sentenceIds,
+      prefixes,
+      extensions: await extensionPermalinks(database, resolved, graph),
+      permalink: view.permalink,
+      title: view.title,
+    }
   })
+
+// What leads into a sentence on the map
+export const getMapParents = createServerFn({ method: 'GET' })
+  .validator(z.object({ sentenceId: z.number().int().nonnegative() }))
+  .handler(({ data }) => getMapAbove(db(), data.sentenceId))

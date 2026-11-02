@@ -33,19 +33,23 @@
 }
 
 .edge {
-  fill: none;
-  stroke: var(--color-grey-medium);
-  stroke-linejoin: round;
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
+  fill: var(--color-grey-medium);
 }
 
 .edge-story {
+  fill: var(--color-black);
+}
+
+/* A sentence linking to itself: a line, not a tapering shape */
+.edge-loop {
   fill: none;
-  stroke: var(--color-black);
-  stroke-linejoin: round;
-  stroke-width: 3;
+  stroke: var(--color-grey-medium);
+  stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
+
+  &.edge-story {
+    stroke: var(--color-black);
+  }
 }
 
 .dot {

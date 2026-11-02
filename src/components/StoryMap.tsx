@@ -4,29 +4,72 @@ import {
   forceCollide,
   forceLink,
   forceManyBody,
-  forceRadial,
   forceSimulation,
+  forceX,
+  forceY,
 } from 'd3-force'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { MapNode } from '../server/data/map.ts'
+import type { MapFragment, MapGraph } from '../server/data/map.ts'
+import { getMapParents } from '../server/fns/stories.ts'
 import { ROOT_NAME } from '../lib/site.ts'
 import { ROOT_ID, storyParam } from '../domain/thread.ts'
+import { last, present } from '../domain/present.ts'
 import styles from './StoryMap.module.css'
 
-// The distance each step along a story is pulled out from the centre
-const RING = 140
+// The length links settle at
+const SPACING = 110
 const POPOVER_WIDTH = 280
 // Room around the map when framing it
 const FRAME_MARGIN = 60
 // Until the map is measured in the browser
 const DEFAULT_SIZE = { width: 700, height: 500 }
+const GLIDE_MS = 450
 
 // The map point at the centre of the view, and screen pixels per map unit
 type Camera = { x: number; y: number; scale: number }
 
 type Point = { x: number; y: number }
 
-type Body = SimulationNodeDatum & { key: string; depth: number }
+type Body = SimulationNodeDatum & { id: number }
+
+// The story the map is showing: its sentences from the root, the
+// permalink of the story up to each, and where each continuation of its
+// last sentence leads
+export type MapStory = {
+  path: number[]
+  prefixes: string[]
+  extensions: Record<number, string>
+}
+
+// Everything loaded so far, one entry per sentence
+type Graph = {
+  fragments: Map<number, MapFragment>
+  links: Map<string, { from: number; to: number }>
+}
+
+const linkKey = (from: number, to: number) => `${from}-${to}`
+
+// Adds newly loaded sentences and links; the same graph back if nothing
+// is new, so the layout only restarts when there is something to place
+const merge = (graph: Graph, more: MapGraph): Graph => {
+  const fresh =
+    more.fragments.some((f) => !graph.fragments.has(f.id)) ||
+    more.links.some((l) => !graph.links.has(linkKey(l.from, l.to)))
+  if (!fresh) {
+    return graph
+  }
+  const fragments = new Map(graph.fragments)
+  for (const fragment of more.fragments) {
+    fragments.set(fragment.id, fragment)
+  }
+  const links = new Map(graph.links)
+  for (const link of more.links) {
+    links.set(linkKey(link.from, link.to), link)
+  }
+  return { fragments, links }
+}
+
+const EMPTY: Graph = { fragments: new Map(), links: new Map() }
 
 const clampScale = (scale: number) => Math.min(Math.max(scale, 0.1), 3)
 
@@ -64,12 +107,15 @@ const framing = (
   points: Iterable<Point>,
   size: typeof DEFAULT_SIZE,
 ): Camera => {
-  let [minX, minY, maxX, maxY] = [0, 0, 0, 0]
+  let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity]
   for (const { x, y } of points) {
     minX = Math.min(minX, x)
     minY = Math.min(minY, y)
     maxX = Math.max(maxX, x)
     maxY = Math.max(maxY, y)
+  }
+  if (minX > maxX) {
+    return { x: 0, y: 0, scale: 1 }
   }
   const scale = clampScale(
     Math.min(
@@ -81,119 +127,150 @@ const framing = (
   return { x: (minX + maxX) / 2, y: (minY + maxY) / 2, scale }
 }
 
-// Dark on the story being read, faded off it; the beginning green, the
-// earliest fragment shown blue when the map starts later than that, and
-// tales' ends red
-const dotClass = (node: MapNode) =>
-  [
-    styles.dot,
-    node.onStory ? styles['dot-story'] : '',
-    node.sentenceId === ROOT_ID
-      ? styles['dot-start']
-      : node.parent === null
-        ? styles['dot-earliest']
-        : '',
-    node.ending ? styles['dot-end'] : '',
-  ].join(' ')
+const round = (n: number) => Math.round(n * 100) / 100
 
-const sentence = (node: MapNode) =>
-  node.sentenceId === 0 ? ROOT_NAME : node.content
+// Where sentences not yet placed start. The first time, spreading out from
+// `anchor` along the links, each in a slice of the circle sized by how many
+// branch tips it leads to; afterwards, a little beyond a neighbour already
+// placed. The physics then only has to settle them. Rounded so the server
+// and the browser draw the same first frame.
+const placeNew = (graph: Graph, placed: Map<number, Point>, anchor: number) => {
+  const positions = new Map(placed)
+  const after = new Map<number, number[]>()
+  const before = new Map<number, number[]>()
+  for (const { from, to } of graph.links.values()) {
+    after.set(from, [...(after.get(from) ?? []), to])
+    before.set(to, [...(before.get(to) ?? []), from])
+  }
 
-// Where each sentence starts: on the ring for its depth, in a slice of the
-// circle shared among its parent's continuations by how many branch tips
-// each leads to. The physics then only has to settle it. Rounded so the
-// server and the browser draw the same first frame.
-const startingPositions = (nodes: MapNode[]) => {
-  const children = new Map<string | null, MapNode[]>()
-  for (const node of nodes) {
-    children.set(node.parent, [...(children.get(node.parent) ?? []), node])
-  }
-  const tips = new Map<string, number>()
-  const countTips = (node: MapNode): number => {
-    const below = children.get(node.key) ?? []
-    const count = below.length
-      ? below.reduce((sum, child) => sum + countTips(child), 0)
-      : 1
-    tips.set(node.key, count)
-    return count
-  }
-  const positions = new Map<string, Point>()
-  const place = (node: MapNode, from: number, to: number) => {
-    const angle = (from + to) / 2
-    const radius = node.depth * RING
-    positions.set(node.key, {
-      x: Math.round(radius * Math.cos(angle) * 100) / 100,
-      y: Math.round(radius * Math.sin(angle) * 100) / 100,
-    })
-    let start = from
-    for (const child of children.get(node.key) ?? []) {
-      const span =
-        ((to - from) * (tips.get(child.key) ?? 1)) / (tips.get(node.key) ?? 1)
-      place(child, start, start + span)
-      start += span
+  if (!positions.size && graph.fragments.has(anchor)) {
+    // A spanning tree from the anchor, found breadth first
+    const children = new Map<number, number[]>()
+    const seen = new Set([anchor])
+    let level = [anchor]
+    const depth = new Map([[anchor, 0]])
+    while (level.length) {
+      const next: number[] = []
+      for (const id of level) {
+        for (const to of after.get(id) ?? []) {
+          if (!seen.has(to)) {
+            seen.add(to)
+            depth.set(to, (depth.get(id) ?? 0) + 1)
+            children.set(id, [...(children.get(id) ?? []), to])
+            next.push(to)
+          }
+        }
+      }
+      level = next
     }
+    const tips = new Map<number, number>()
+    const countTips = (id: number): number => {
+      const below = children.get(id) ?? []
+      const count = below.length
+        ? below.reduce((sum, child) => sum + countTips(child), 0)
+        : 1
+      tips.set(id, count)
+      return count
+    }
+    countTips(anchor)
+    const place = (id: number, from: number, to: number) => {
+      // A gentle turn at each step, so a long story curves rather than
+      // lying in a straight line the physics can't push sideways
+      const level = depth.get(id) ?? 0
+      const angle = (from + to) / 2 + level * 0.35
+      const radius = level * SPACING
+      positions.set(id, {
+        x: round(radius * Math.cos(angle)),
+        y: round(radius * Math.sin(angle)),
+      })
+      let start = from
+      for (const child of children.get(id) ?? []) {
+        const span =
+          ((to - from) * (tips.get(child) ?? 1)) / (tips.get(id) ?? 1)
+        place(child, start, start + span)
+        start += span
+      }
+    }
+    place(anchor, -Math.PI / 2, (3 * Math.PI) / 2)
   }
-  for (const centre of children.get(null) ?? []) {
-    countTips(centre)
-    place(centre, -Math.PI / 2, (3 * Math.PI) / 2)
+
+  // Everything else, next to a placed neighbour: beyond it for something
+  // that follows it, before it for something that leads in
+  let waiting = [...graph.fragments.keys()].filter((id) => !positions.has(id))
+  while (waiting.length) {
+    const still: number[] = []
+    for (const id of waiting) {
+      const parent = (before.get(id) ?? []).find((n) => positions.has(n))
+      const child = (after.get(id) ?? []).find((n) => positions.has(n))
+      const neighbour = parent ?? child
+      const at = neighbour === undefined ? undefined : positions.get(neighbour)
+      if (!at) {
+        still.push(id)
+        continue
+      }
+      const length = Math.hypot(at.x, at.y)
+      // Away from the middle, or a direction of its own at the middle
+      const angle = length > 1 ? Math.atan2(at.y, at.x) : id
+      const side = ((id % 5) - 2) * 0.35
+      const sign = parent === undefined ? -1 : 1
+      positions.set(id, {
+        x: round(at.x + sign * SPACING * Math.cos(angle + side)),
+        y: round(at.y + sign * SPACING * Math.sin(angle + side)),
+      })
+    }
+    if (still.length === waiting.length) {
+      for (const id of still) {
+        positions.set(id, { x: 0, y: 0 })
+      }
+      break
+    }
+    waiting = still
   }
   return positions
 }
 
-// Runs the physics that lays out the map: sentences pulled out to a ring
-// for their depth, held to their continuations by springs, pushed apart
-// from each other, and kept from overlapping. The first sentence is
-// pinned at the centre; the rest start near where they'll settle.
-//
-// It restarts only when the tree itself changes, not whenever the same
-// data arrives again (as it does after a preload), and then keeps the
-// sentences it already placed where they are.
-const useForceLayout = (nodes: MapNode[]) => {
-  const [positions, setPositions] = useState(() => startingPositions(nodes))
-  const shape = nodes.map((n) => `${n.key}<${n.parent ?? ''}`).join(' ')
-  const latest = useRef(nodes)
+// Runs the physics that lays out the map: sentences held to the ones they
+// lead to by springs, pushed apart from each other, kept from overlapping,
+// and drawn gently towards the middle. New sentences start next to their
+// neighbours; those already placed stay where they are, so the map grows
+// rather than changing shape.
+const useForceLayout = (graph: Graph, anchor: number) => {
+  const [positions, setPositions] = useState(() =>
+    placeNew(graph, new Map(), anchor),
+  )
+  const latest = useRef({ graph, anchor, positions })
   useEffect(() => {
-    latest.current = nodes
+    latest.current = { graph, anchor, positions }
   })
-  // Where everything was, kept for when the tree changes
-  const placed = useRef(new Map<string, Point>())
   useEffect(() => {
-    const nodes = latest.current
-    const kept = placed.current
-    const start = startingPositions(nodes)
-    const bodies: Body[] = nodes.map((node) => {
-      const at = kept.get(node.key) ?? start.get(node.key) ?? { x: 0, y: 0 }
-      return {
-        key: node.key,
-        depth: node.depth,
-        x: at.x,
-        y: at.y,
-        ...(node.parent === null ? { fx: 0, fy: 0 } : {}),
-      }
-    })
-    const links = nodes.flatMap((node) =>
-      node.parent ? [{ source: node.parent, target: node.key }] : [],
-    )
-    const publish = () => {
-      const at = new Map(
-        bodies.map((b) => [b.key, { x: b.x ?? 0, y: b.y ?? 0 }]),
+    const { graph, anchor, positions: placed } = latest.current
+    const start = placeNew(graph, placed, anchor)
+    const settled = [...graph.fragments.keys()].every((id) => placed.has(id))
+    const bodies: Body[] = [...graph.fragments.keys()].map((id) => ({
+      id,
+      ...(start.get(id) ?? { x: 0, y: 0 }),
+    }))
+    const links = [...graph.links.values()]
+      .filter((l) => l.from !== l.to)
+      .map((l) => ({ source: l.from, target: l.to }))
+    const publish = () =>
+      setPositions(
+        new Map(bodies.map((b) => [b.id, { x: b.x ?? 0, y: b.y ?? 0 }])),
       )
-      placed.current = at
-      setPositions(at)
-    }
     const simulation = forceSimulation(bodies)
       .force(
         'links',
-        forceLink<Body, { source: string; target: string }>(links)
-          .id((b) => b.key)
-          .distance(RING * 0.8)
-          .strength(0.6),
+        forceLink<Body, { source: number; target: number }>(links)
+          .id((b) => b.id)
+          .distance(SPACING)
+          .strength(0.5),
       )
       .force('repel', forceManyBody<Body>().strength(-260))
-      .force('rings', forceRadial<Body>((b) => b.depth * RING).strength(0.5))
       .force('collide', forceCollide<Body>(20))
+      .force('x', forceX<Body>(0).strength(0.02))
+      .force('y', forceY<Body>(0).strength(0.02))
       // Starting close to the end, with more damping, it eases into place
-      .alpha(kept.size ? 0.2 : 0.5)
+      .alpha(settled ? 0.05 : placed.size ? 0.25 : 0.5)
       .velocityDecay(0.6)
     const reduceMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
@@ -207,30 +284,142 @@ const useForceLayout = (nodes: MapNode[]) => {
     return () => {
       simulation.stop()
     }
-  }, [shape])
+  }, [graph])
   return positions
 }
 
-// The branches around a story, spreading out from its first sentence;
-// panned by dragging and zoomed with the wheel or the buttons
-export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
-  const positions = useForceLayout(nodes)
-  const byKey = useMemo(() => new Map(nodes.map((n) => [n.key, n])), [nodes])
+// A link drawn as a tapering shape, wide where it leaves and narrow where
+// it arrives, so a loop's direction shows; curved when two sentences link
+// both ways. `inset` keeps it clear of the dots.
+const taper = (
+  a: Point,
+  b: Point,
+  widths: [number, number],
+  bend: number,
+  inset: number,
+) => {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const length = Math.hypot(dx, dy) || 1
+  const normal = { x: -dy / length, y: dx / length }
+  const control = {
+    x: (a.x + b.x) / 2 + normal.x * bend,
+    y: (a.y + b.y) / 2 + normal.y * bend,
+  }
+  const t0 = Math.min(inset / length, 0.45)
+  const t1 = 1 - t0
+  const steps = bend ? 12 : 1
+  const left: string[] = []
+  const right: string[] = []
+  for (let i = 0; i <= steps; i++) {
+    const t = t0 + ((t1 - t0) * i) / steps
+    const u = 1 - t
+    const p = {
+      x: u * u * a.x + 2 * u * t * control.x + t * t * b.x,
+      y: u * u * a.y + 2 * u * t * control.y + t * t * b.y,
+    }
+    const d = {
+      x: 2 * u * (control.x - a.x) + 2 * t * (b.x - control.x),
+      y: 2 * u * (control.y - a.y) + 2 * t * (b.y - control.y),
+    }
+    const dl = Math.hypot(d.x, d.y) || 1
+    const n = { x: -d.y / dl, y: d.x / dl }
+    const half = (widths[0] + ((widths[1] - widths[0]) * i) / steps) / 2
+    left.push(`${p.x + n.x * half} ${p.y + n.y * half}`)
+    right.push(`${p.x - n.x * half} ${p.y - n.y * half}`)
+  }
+  return `M ${left.join(' L ')} L ${right.reverse().join(' L ')} Z`
+}
+
+// A sentence linking to itself, drawn as a small loop above it
+const selfLoop = (a: Point, size: number) =>
+  `M ${a.x} ${a.y} C ${a.x - size} ${a.y - size * 1.6} ${a.x + size} ${
+    a.y - size * 1.6
+  } ${a.x} ${a.y}`
+
+const sentence = (fragment: MapFragment) =>
+  fragment.id === ROOT_ID ? ROOT_NAME : fragment.content
+
+// The graph around a story, which grows as you explore: a dot opens the map
+// around its sentence and adds what lies beyond it, the earliest sentence
+// shown loads what leads into it, and nothing already placed moves far.
+// Panned by dragging and zoomed with the wheel or the buttons.
+export const StoryMap = ({
+  graph: loaded,
+  story,
+}: {
+  graph: MapGraph
+  story: MapStory
+}) => {
+  const [graph, setGraph] = useState(() => merge(EMPTY, loaded))
+  // New data for the map arrives as you move around it
+  const [lastLoaded, setLastLoaded] = useState(loaded)
+  if (loaded !== lastLoaded) {
+    setLastLoaded(loaded)
+    setGraph(merge(graph, loaded))
+  }
+
+  const { path, prefixes, extensions } = story
+  // The story is drawn from the earliest of its sentences loaded so far
+  let first = path.length - 1
+  while (first > 0 && graph.fragments.has(present(path[first - 1]))) {
+    first--
+  }
+  const earliest = present(path[first])
+  const current = last(path)
+  const onStory = new Set(path.slice(first))
+  const storyLinks = new Set(
+    path.slice(first + 1).map((id, i) => linkKey(present(path[first + i]), id)),
+  )
+
+  const positions = useForceLayout(graph, earliest)
+  const shownAfter = useMemo(() => {
+    const counts = new Map<number, number>()
+    for (const { from } of graph.links.values()) {
+      counts.set(from, (counts.get(from) ?? 0) + 1)
+    }
+    return counts
+  }, [graph])
+
+  // Where a sentence leads: along the story if it is on it or continues
+  // it, otherwise the story it was written in
+  const target = (fragment: MapFragment) => {
+    const index = path.lastIndexOf(fragment.id)
+    return (
+      (index >= 0 ? prefixes[index] : undefined) ??
+      extensions[fragment.id] ??
+      fragment.origin
+    )
+  }
+
+  const [loadingAbove, setLoadingAbove] = useState(false)
+  const loadAbove = async (id: number) => {
+    if (loadingAbove) {
+      return
+    }
+    setLoadingAbove(true)
+    try {
+      const more = await getMapParents({ data: { sentenceId: id } })
+      setGraph((g) => merge(g, more))
+    } finally {
+      setLoadingAbove(false)
+    }
+  }
 
   const [size, setSize] = useState(DEFAULT_SIZE)
-  // Follows the layout as it settles, until the reader pans or zooms
+  // Follows the layout as it settles, until the reader moves around
   const [chosen, setChosen] = useState<Camera | null>(null)
   const camera = chosen ?? framing(positions.values(), size)
-  const [hovered, setHovered] = useState<string | null>(null)
+  const [hovered, setHovered] = useState<number | null>(null)
   const pointerType = useRef<string>('mouse')
   const pressing = useRef(false)
   const popoverLink = useRef<HTMLAnchorElement>(null)
   // The popover closes a moment after the pointer leaves, so it can be
   // reached from its dot
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const show = (key: string) => {
+  const show = (id: number) => {
     clearTimeout(hideTimer.current)
-    setHovered(key)
+    setHovered(id)
   }
   const hideSoon = () => {
     clearTimeout(hideTimer.current)
@@ -238,10 +427,10 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
   }
   useEffect(() => () => clearTimeout(hideTimer.current), [])
   const svg = useRef<SVGSVGElement>(null)
-  // The latest camera, for the wheel listener
-  const cameraRef = useRef(camera)
+  // The latest camera and layout, for listeners and animations
+  const latest = useRef({ camera, positions })
   useEffect(() => {
-    cameraRef.current = camera
+    latest.current = { camera, positions }
   })
   const drag = useRef<{
     x: number
@@ -249,6 +438,40 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
     camera: Camera
     moved: boolean
   }>(null)
+
+  // Glides to where you are when you move along the map
+  const glide = useRef(0)
+  const lastCurrent = useRef(current)
+  useEffect(() => {
+    if (lastCurrent.current === current) {
+      return
+    }
+    lastCurrent.current = current
+    const to = latest.current.positions.get(current)
+    if (!to) {
+      return
+    }
+    const from = latest.current.camera
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    const started = performance.now()
+    const step = (now: number) => {
+      const t = reduceMotion ? 1 : Math.min(1, (now - started) / GLIDE_MS)
+      const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
+      setChosen({
+        x: from.x + (to.x - from.x) * eased,
+        y: from.y + (to.y - from.y) * eased,
+        scale: from.scale,
+      })
+      if (t < 1) {
+        glide.current = requestAnimationFrame(step)
+      }
+    }
+    cancelAnimationFrame(glide.current)
+    glide.current = requestAnimationFrame(step)
+  }, [current])
+  useEffect(() => () => cancelAnimationFrame(glide.current), [])
 
   // Follows the map's size, and zooms with the wheel through a non-passive
   // listener so the page doesn't scroll instead
@@ -268,18 +491,15 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
     observer.observe(element)
     const onWheel = (event: WheelEvent) => {
       event.preventDefault()
-      setChosen((c) =>
-        zoomed(
-          c ?? cameraRef.current,
+      cancelAnimationFrame(glide.current)
+      setChosen((c) => {
+        const from = c ?? latest.current.camera
+        return zoomed(
+          from,
           Math.exp(-event.deltaY * 0.0015),
-          pointAt(
-            element,
-            event.clientX,
-            event.clientY,
-            c ?? cameraRef.current,
-          ),
-        ),
-      )
+          pointAt(element, event.clientX, event.clientY, from),
+        )
+      })
     }
     element.addEventListener('wheel', onWheel, { passive: false })
     return () => {
@@ -288,7 +508,10 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
     }
   }, [])
 
-  const zoom = (factor: number) => setChosen(zoomed(camera, factor))
+  const zoom = (factor: number) => {
+    cancelAnimationFrame(glide.current)
+    setChosen(zoomed(camera, factor))
+  }
   const width = size.width / camera.scale
   const height = size.height / camera.scale
   const viewBox = [
@@ -298,11 +521,26 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
     height,
   ].join(' ')
 
+  const dotClass = (fragment: MapFragment) =>
+    [
+      styles.dot,
+      onStory.has(fragment.id) ? styles['dot-story'] : '',
+      // The beginning green; the earliest of the story shown blue when the
+      // map starts later than that
+      fragment.id === ROOT_ID
+        ? styles['dot-start']
+        : fragment.id === earliest
+          ? styles['dot-earliest']
+          : '',
+      // Tales' ends red
+      fragment.continuations === 0 ? styles['dot-end'] : '',
+    ].join(' ')
+
   // The popover sits above its dot, or below near the top, inside the map
   const popover = (() => {
-    const node = hovered ? byKey.get(hovered) : undefined
-    const at = node ? positions.get(node.key) : undefined
-    if (!node || !at) {
+    const fragment = hovered === null ? undefined : graph.fragments.get(hovered)
+    const at = fragment ? positions.get(fragment.id) : undefined
+    if (!fragment || !at) {
       return null
     }
     const x = (at.x - camera.x) * camera.scale + size.width / 2
@@ -310,7 +548,8 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
     const half = Math.min(POPOVER_WIDTH, size.width - 16) / 2
     const above = y > 140
     return {
-      node,
+      fragment,
+      more: fragment.continuations - (shownAfter.get(fragment.id) ?? 0),
       style: {
         left: Math.min(Math.max(x, half + 8), size.width - half - 8),
         top: above ? y - 16 : y + 16,
@@ -319,6 +558,9 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
       },
     }
   })()
+
+  const px = 1 / camera.scale
+  const fragments = [...graph.fragments.values()]
 
   return (
     <div className={styles.map}>
@@ -339,7 +581,14 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
         >
           −
         </button>
-        <button type="button" className="link" onClick={() => setChosen(null)}>
+        <button
+          type="button"
+          className="link"
+          onClick={() => {
+            cancelAnimationFrame(glide.current)
+            setChosen(null)
+          }}
+        >
           reset
         </button>
       </div>
@@ -349,10 +598,12 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
         viewBox={viewBox}
         role="img"
         aria-label="Map of the story's branches"
+        aria-busy={loadingAbove}
         onPointerDown={(event) => {
           if (event.target === event.currentTarget) {
             setHovered(null)
           }
+          cancelAnimationFrame(glide.current)
           drag.current = {
             x: event.clientX,
             y: event.clientY,
@@ -393,40 +644,55 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
           }
         }}
       >
-        {nodes.map((node) => {
-          const from = node.parent ? positions.get(node.parent) : undefined
-          const to = positions.get(node.key)
-          if (!from || !to) {
+        {[...graph.links.values()].map(({ from, to }) => {
+          const a = positions.get(from)
+          const b = positions.get(to)
+          if (!a || !b) {
             return null
           }
+          const key = linkKey(from, to)
+          const story = storyLinks.has(key)
+          const className = story ? styles['edge-story'] : styles.edge
+          if (from === to) {
+            return (
+              <path
+                key={key}
+                d={selfLoop(a, 22 * px)}
+                className={`${className} ${styles['edge-loop']}`}
+              />
+            )
+          }
+          const both = graph.links.has(linkKey(to, from))
+          const length = Math.hypot(b.x - a.x, b.y - a.y)
           return (
-            <line
-              key={`edge-${node.key}`}
-              x1={from.x}
-              y1={from.y}
-              x2={to.x}
-              y2={to.y}
-              className={
-                node.onStory && byKey.get(node.parent ?? '')?.onStory
-                  ? styles['edge-story']
-                  : styles.edge
-              }
+            <path
+              key={key}
+              d={taper(
+                a,
+                b,
+                story ? [6 * px, 1.5 * px] : [4 * px, 1 * px],
+                both ? length * 0.2 : 0,
+                7 * px,
+              )}
+              className={className}
             />
           )
         })}
-        {nodes.map((node) => {
-          const at = positions.get(node.key)
+        {fragments.map((fragment) => {
+          const at = positions.get(fragment.id)
           if (!at) {
             return null
           }
+          const id = fragment.id
+          const loadsAbove = id === earliest && id !== ROOT_ID
           return (
             <g
-              key={node.key}
+              key={id}
               transform={`translate(${at.x} ${at.y})`}
               onPointerEnter={(event) => {
                 // Touch has no hover: a first tap shows the sentence instead
                 if (event.pointerType === 'mouse') {
-                  show(node.key)
+                  show(id)
                 }
               }}
               onPointerLeave={(event) => {
@@ -442,7 +708,7 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
                 // Keyboard focus shows the sentence; a tap's focus waits
                 // for the tap itself
                 if (!pressing.current) {
-                  show(node.key)
+                  show(id)
                 }
               }}
               onBlur={hideSoon}
@@ -451,7 +717,7 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
                 if (
                   event.key === 'Tab' &&
                   !event.shiftKey &&
-                  hovered === node.key &&
+                  hovered === id &&
                   popoverLink.current
                 ) {
                   event.preventDefault()
@@ -459,27 +725,33 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
                 }
               }}
             >
-              {node.current ? (
-                <circle r={10 / camera.scale} className={styles.ring} />
+              {id === current ? (
+                <circle r={10 * px} className={styles.ring} />
               ) : null}
-              <circle r={5 / camera.scale} className={dotClass(node)} />
+              <circle r={5 * px} className={dotClass(fragment)} />
               <Link
                 to="/map/$story"
-                params={{ story: storyParam(node.permalink) }}
-                aria-label={sentence(node)}
+                params={{ story: storyParam(target(fragment)) }}
+                aria-label={sentence(fragment)}
                 className={styles.target}
                 onClick={(event) => {
                   pressing.current = false
                   // On touch screens, the first tap shows the sentence and
-                  // a second opens the map around it
-                  if (pointerType.current === 'touch' && hovered !== node.key) {
+                  // a second acts on it
+                  if (pointerType.current === 'touch' && hovered !== id) {
                     event.preventDefault()
-                    show(node.key)
+                    show(id)
+                    return
+                  }
+                  // The earliest sentence shown loads what leads into it
+                  if (loadsAbove) {
+                    event.preventDefault()
+                    void loadAbove(id)
                   }
                 }}
               >
                 {/* A wider target than the dot, for fingers */}
-                <circle r={14 / camera.scale} />
+                <circle r={14 * px} />
               </Link>
             </g>
           )
@@ -499,14 +771,11 @@ export const StoryMap = ({ nodes }: { nodes: MapNode[] }) => {
             }
           }}
         >
-          <Link ref={popoverLink} to={popover.node.permalink}>
-            {sentence(popover.node)}
+          <Link ref={popoverLink} to={target(popover.fragment)}>
+            {sentence(popover.fragment)}
           </Link>
-          {popover.node.loop || popover.node.more ? (
-            <span className={styles.notes}>
-              {popover.node.loop ? '↺ ' : ''}
-              {popover.node.more ? `+${popover.node.more}` : ''}
-            </span>
+          {popover.more > 0 ? (
+            <span className={styles.notes}>+{popover.more}</span>
           ) : null}
         </div>
       ) : null}

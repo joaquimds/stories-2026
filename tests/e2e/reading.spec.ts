@@ -181,18 +181,46 @@ test('maps the branches around a story', async ({ page }) => {
     page.getByRole('heading', { name: 'Map of The Bridge' }),
   ).toBeVisible()
   const map = page.getByRole('img', { name: "Map of the story's branches" })
-  await expect(map).toBeVisible()
-  // A dot opens the map around it (the clearing was linked after the
-  // bridge)
-  await map.getByRole('link', { name: /At the clearing/ }).click()
+  const dot = (name: RegExp) => map.getByRole('link', { name })
+  await expect(dot(/She took the left path/)).toHaveCount(1)
+  // A dot moves along the map (the clearing was linked after the bridge),
+  // keeping what was already there
+  await dot(/At the clearing/).click()
   await expect(page).toHaveURL(/\/map\/\d+\.\d+-\d+$/)
+  await expect(dot(/She took the left path/)).toHaveCount(1)
+  // Each sentence appears once, even where a loop leads back to it
+  await expect(dot(/In the garden/)).toHaveCount(1)
   // The sentence in its popover opens the story: focus a dot, then Tab to
   // its sentence
-  await map.getByRole('link', { name: /At the clearing/ }).focus()
+  await dot(/She took the left path/).focus()
   await page.keyboard.press('Tab')
-  await expect(
-    page.getByRole('tooltip').getByRole('link', { name: /At the clearing/ }),
-  ).toBeFocused()
+  const sentence = page
+    .getByRole('tooltip')
+    .getByRole('link', { name: /She took the left path/ })
+  await expect(sentence).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/s\/\d+\.\d+-\d+$/)
+  await expect(page).toHaveURL(/\/s\//)
+  await expect(
+    page.locator('main').getByText('She took the left path'),
+  ).toBeVisible()
+})
+
+test('loads what leads into the earliest sentence on a map', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  // Along the bridge, over the crossing, and on past the clearing
+  await page.goto('/map/The_Bridge')
+  const map = page.getByRole('img', { name: "Map of the story's branches" })
+  await map.getByRole('link', { name: /At the clearing/ }).click()
+  await map.getByRole('link', { name: /Neither of them/ }).click()
+  await expect(page).toHaveURL(/\/map\/\d+\.\d+-\d+$/)
+  // Fresh, the map starts after the beginning
+  await page.reload()
+  const beginning = map.getByRole('link', { name: '(the beginning)' })
+  await expect(beginning).toHaveCount(0)
+  const url = page.url()
+  await map.getByRole('link', { name: /In the garden/ }).click()
+  await expect(beginning).toHaveCount(1)
+  expect(page.url()).toBe(url)
 })

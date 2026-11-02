@@ -1,115 +1,163 @@
 import { sql } from 'kysely'
 import { ROOT_ID, permalink } from '../../domain/thread.ts'
+import { present } from '../../domain/present.ts'
 import type { Db } from '../db/index.ts'
-import { type ResolvedStory, loadDefaultParents, threadOf } from './paths.ts'
+import { type ResolvedStory, encodeThreads, pathPermalinks } from './paths.ts'
 import { popularOrder, popularityScores } from './rules.ts'
-import { last, present } from '../../domain/present.ts'
+import { maskContent } from './sentences.ts'
 
-// How much of the tree around a story to show
+// How much of the graph around a story to load at once
 export const MAP_LIMITS = {
   // Sentences of the story itself, ending at the current one
   trunk: 5,
-  // Levels shown beyond the current sentence
+  // Levels loaded beyond the current sentence
   ahead: 3,
-  // Levels shown along a branch that leaves the story
+  // Levels loaded along a branch that leaves the story
   aside: 2,
-  // Continuations shown per sentence, the most popular first
+  // Continuations loaded per sentence, the most popular first
   children: 8,
-  nodes: 150,
+  // Levels, and sentences per level, loaded when asking what leads in
+  above: 2,
+  parents: 8,
+  fragments: 150,
 }
 
-export type MapNode = {
-  key: string
-  parent: string | null
-  sentenceId: number
+// One sentence on the map, however many routes lead to it
+export type MapFragment = {
+  id: number
+  // Empty for the root
   content: string
-  permalink: string
-  depth: number
-  // Part of the story being read, and where the reader is
-  onStory: boolean
-  current: boolean
-  // The sentence appears earlier on its own path, so it loops back
-  loop: boolean
-  // Continuations not shown
-  more: number
-  // Nothing continues it: a tale's end
-  ending: boolean
+  // All its continuations, loaded or not
+  continuations: number
+  // The story along the route it was written on
+  origin: string
 }
 
-type Pending = {
-  node: MapNode
-  // Sentence ids from the map's first node to this one
-  ids: number[]
-  // The path for this route, if anyone has used it
+// A link from one sentence to another; a loop is a link back to a
+// sentence already on the map
+export type MapLink = { from: number; to: number }
+
+export type MapGraph = { fragments: MapFragment[]; links: MapLink[] }
+
+// Sentence details for the map
+const describe = async (db: Db, ids: number[]): Promise<MapFragment[]> => {
+  if (!ids.length) {
+    return []
+  }
+  const rows = await db
+    .selectFrom('sentences as s')
+    .innerJoin('paths as origin', (join) =>
+      join
+        .onRef('origin.sentence_id', '=', 's.id')
+        .on(
+          sql<boolean>`origin.parent_id is not distinct from s.written_under_path_id`,
+        ),
+    )
+    .select((eb) => [
+      's.id',
+      's.content',
+      's.deleted_at',
+      'origin.id as origin_path_id',
+      eb
+        .selectFrom('links as l')
+        .innerJoin('sentences as t', 't.id', 'l.to_sentence_id')
+        .whereRef('l.from_sentence_id', '=', 's.id')
+        .where('t.deleted_at', 'is', null)
+        .select(sql<number>`count(*)::int`.as('n'))
+        .as('continuations'),
+    ])
+    .where('s.id', 'in', ids)
+    .execute()
+  const origins = await pathPermalinks(
+    db,
+    rows.map((r) => r.origin_path_id),
+  )
+  const byId = new Map(rows.map((r) => [r.id, r]))
+  return ids.flatMap((id) => {
+    const r = byId.get(id)
+    if (!r) {
+      return []
+    }
+    return [
+      {
+        id,
+        content: id === ROOT_ID ? '' : maskContent(r.content, r.deleted_at),
+        continuations: r.continuations ?? 0,
+        origin: origins.get(r.origin_path_id)?.permalink ?? '/',
+      },
+    ]
+  })
+}
+
+// Collects sentences and links in the order they are found
+const collector = () => {
+  const ids: number[] = []
+  const seen = new Set<number>()
+  const links: MapLink[] = []
+  const linked = new Set<string>()
+  return {
+    ids,
+    links,
+    has: (id: number) => seen.has(id),
+    add: (id: number) => {
+      if (!seen.has(id)) {
+        seen.add(id)
+        ids.push(id)
+      }
+    },
+    link: (from: number, to: number) => {
+      const key = `${from}-${to}`
+      if (!linked.has(key)) {
+        linked.add(key)
+        links.push({ from, to })
+      }
+    },
+  }
+}
+
+type Frontier = {
+  id: number
+  // The path this route reaches the sentence by, if anyone has used it,
+  // for ranking its continuations as the story page does
   pathId: number | null
-  // Levels left to expand below this node
-  budget: number
+  // The next sentence along the story, kept first so it is never cut off
+  next?: number
+  levels: number
 }
 
-// The part of the story graph around a story, as a tree of paths: the end
-// of the story, the branches along it, and what lies a few steps ahead
+// The graph around a story: its last few sentences, the branches leaving
+// them, and what lies a few steps ahead. Each sentence appears once; a
+// route that comes back to one already found shows as a link to it.
 export const getStoryMap = async (
   db: Db,
   story: ResolvedStory,
   limits = MAP_LIMITS,
-): Promise<MapNode[]> => {
+): Promise<MapGraph> => {
   const all = story.sentenceIds
-  // Show the root only when the story is short enough to include it
   const start = Math.max(0, all.length - limits.trunk)
-  const prefix = all.slice(0, start)
-  const trunk = all.slice(start)
-
-  const content = async (ids: number[]) => {
-    const rows = ids.length
-      ? await db
-          .selectFrom('sentences')
-          .select(['id', 'content', 'deleted_at'])
-          .where('id', 'in', ids)
-          .execute()
-      : []
-    return new Map(
-      rows.map((r) => [r.id, r.deleted_at ? '[deleted]' : r.content]),
-    )
+  const found = collector()
+  for (let i = start; i < all.length; i++) {
+    found.add(present(all[i]))
+    if (i > start) {
+      found.link(present(all[i - 1]), present(all[i]))
+    }
   }
 
-  const first = present(trunk[0])
-  const firstContent = await content([first])
-  const nodes: MapNode[] = []
-  const sequences = new Map<string, number[]>()
-  const add = (node: Omit<MapNode, 'permalink'>, ids: number[]) => {
-    const full = { ...node, permalink: '' }
-    nodes.push(full)
-    sequences.set(full.key, [...prefix, ...ids])
-    return full
-  }
+  // Branches leave each of the story's sentences, and the last one is
+  // followed further ahead
+  let frontier: Frontier[] = all.slice(start).map((id, offset) => {
+    const i = start + offset
+    const last = i === all.length - 1
+    return {
+      id,
+      pathId: story.pathIds[i] ?? null,
+      next: last ? undefined : all[i + 1],
+      levels: last ? limits.ahead : limits.aside,
+    }
+  })
+  const explored = new Set<number>()
 
-  const rootNode = add(
-    {
-      key: '0',
-      parent: null,
-      sentenceId: first,
-      content: first === ROOT_ID ? '' : (firstContent.get(first) ?? ''),
-      depth: 0,
-      onStory: true,
-      current: trunk.length === 1,
-      loop: false,
-      more: 0,
-      ending: false,
-    },
-    [first],
-  )
-  let frontier: Pending[] = [
-    {
-      node: rootNode,
-      ids: [first],
-      pathId: story.pathIds[start] ?? null,
-      budget: trunk.length === 1 ? limits.ahead : Number.POSITIVE_INFINITY,
-    },
-  ]
-
-  while (frontier.length && nodes.length < limits.nodes) {
-    // Each frontier route's continuations, in the Popular order, with the
-    // path each continuation would make if anyone has used it
+  while (frontier.length && found.ids.length < limits.fragments) {
     const { rows } = await sql<{
       grp: number
       sentence_id: number
@@ -119,8 +167,8 @@ export const getStoryMap = async (
         select f.grp, f.parent_path, l.to_sentence_id as sentence_id
         from unnest(
           ${frontier.map((_, i) => i)}::int[],
-          ${frontier.map((p) => last(p.ids))}::bigint[],
-          ${frontier.map((p) => p.pathId)}::bigint[]
+          ${frontier.map((f) => f.id)}::bigint[],
+          ${frontier.map((f) => f.pathId)}::bigint[]
         ) as f(grp, sentence, parent_path)
         join app.links l on l.from_sentence_id = f.sentence
         join app.sentences s on s.id = l.to_sentence_id
@@ -140,75 +188,100 @@ export const getStoryMap = async (
     for (const row of rows) {
       continuations[row.grp]?.push({ id: row.sentence_id, pathId: row.path_id })
     }
-    const texts = await content(rows.map((r) => r.sentence_id))
 
-    const next: Pending[] = []
-    for (const [index, { node, ids, budget }] of frontier.entries()) {
+    const next: Frontier[] = []
+    for (const [index, item] of frontier.entries()) {
+      explored.add(item.id)
       const children = continuations[index] ?? []
-      node.ending = children.length === 0
-      if (budget <= 0 || node.loop) {
-        node.more = children.length
-        continue
-      }
-      // The story's next sentence comes first, so it is never cut off
-      const trunkNext = node.onStory ? trunk[node.depth + 1] : undefined
       const ordered =
-        trunkNext === undefined
+        item.next === undefined
           ? children
           : [
-              ...children.filter((c) => c.id === trunkNext),
-              ...children.filter((c) => c.id !== trunkNext),
+              ...children.filter((c) => c.id === item.next),
+              ...children.filter((c) => c.id !== item.next),
             ]
-      const shown = ordered.slice(0, limits.children)
-      node.more = children.length - shown.length
-      for (const [i, { id, pathId }] of shown.entries()) {
-        if (nodes.length >= limits.nodes) {
-          node.more += shown.length - i
+      for (const child of ordered.slice(0, limits.children)) {
+        if (!found.has(child.id) && found.ids.length >= limits.fragments) {
           break
         }
-        const onStory = node.onStory && id === trunkNext
-        const childIds = [...ids, id]
-        const current = onStory && node.depth + 1 === trunk.length - 1
-        const child = add(
-          {
-            key: `${node.key}.${i}`,
-            parent: node.key,
-            sentenceId: id,
-            content: texts.get(id) ?? '',
-            depth: node.depth + 1,
-            onStory,
-            current,
-            loop: ids.includes(id),
-            more: 0,
-            ending: false,
-          },
-          childIds,
-        )
-        next.push({
-          node: child,
-          ids: childIds,
-          pathId,
-          // The story itself is shown in full; the current sentence's
-          // continuations `ahead` levels deep; branches leaving the story
-          // `aside` levels deep
-          budget: onStory
-            ? current
-              ? limits.ahead
-              : Number.POSITIVE_INFINITY
-            : node.onStory && !node.current
-              ? limits.aside - 1
-              : budget - 1,
-        })
+        found.link(item.id, child.id)
+        if (found.has(child.id)) {
+          continue
+        }
+        found.add(child.id)
+        if (item.levels > 1 && !explored.has(child.id)) {
+          next.push({
+            id: child.id,
+            pathId: child.pathId,
+            levels: item.levels - 1,
+          })
+        }
       }
     }
     frontier = next
   }
 
-  const defaults = await loadDefaultParents(db, [...sequences.values()].flat())
-  for (const node of nodes) {
-    node.permalink = permalink(
-      threadOf(present(sequences.get(node.key)), defaults),
-    )
+  return {
+    fragments: await describe(db, found.ids),
+    links: found.links,
   }
-  return nodes
+}
+
+// What leads into a sentence: every sentence linking to it, and what leads
+// into those, a few levels up
+export const getMapAbove = async (
+  db: Db,
+  sentenceId: number,
+  limits = MAP_LIMITS,
+): Promise<MapGraph> => {
+  const found = collector()
+  found.add(sentenceId)
+  let frontier = [sentenceId]
+  for (let level = 0; level < limits.above && frontier.length; level++) {
+    const rows = await db
+      .selectFrom('links as l')
+      .innerJoin('sentences as s', 's.id', 'l.from_sentence_id')
+      .select(['l.from_sentence_id', 'l.to_sentence_id'])
+      .where('l.to_sentence_id', 'in', frontier)
+      .where('s.deleted_at', 'is', null)
+      .orderBy('l.to_sentence_id')
+      .orderBy('l.id')
+      .execute()
+    const next: number[] = []
+    const perSentence = new Map<number, number>()
+    for (const row of rows) {
+      const count = perSentence.get(row.to_sentence_id) ?? 0
+      if (count >= limits.parents || found.ids.length >= limits.fragments) {
+        continue
+      }
+      perSentence.set(row.to_sentence_id, count + 1)
+      found.link(row.from_sentence_id, row.to_sentence_id)
+      if (!found.has(row.from_sentence_id)) {
+        found.add(row.from_sentence_id)
+        next.push(row.from_sentence_id)
+      }
+    }
+    frontier = next
+  }
+  return {
+    fragments: await describe(db, found.ids),
+    links: found.links,
+  }
+}
+
+// The story followed on to each continuation of its last sentence
+export const extensionPermalinks = async (
+  db: Db,
+  story: ResolvedStory,
+  graph: MapGraph,
+): Promise<Record<number, string>> => {
+  const last = story.sentenceIds.at(-1)
+  const next = graph.links.filter((l) => l.from === last).map((l) => l.to)
+  const threads = await encodeThreads(
+    db,
+    next.map((id) => [...story.sentenceIds, id]),
+  )
+  return Object.fromEntries(
+    next.map((id, i) => [id, permalink(present(threads[i]))]),
+  )
 }

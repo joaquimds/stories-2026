@@ -18,16 +18,16 @@ export const Route = createFileRoute('/map/$story')({
 })
 
 function MapPage() {
-  const { nodes, permalink, title } = Route.useLoaderData()
+  const { graph, path, prefixes, extensions, permalink, title } =
+    Route.useLoaderData()
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <h1>{title ? `Map of ${title}` : 'Map'}</h1>
         <Link to={permalink}>(back to the story)</Link>
       </div>
-      {/* A fresh map for each story; the same story's data arriving again
-          keeps it */}
-      <StoryMap key={permalink} nodes={nodes} />
+      {/* One map that grows as you move around it */}
+      <StoryMap graph={graph} story={{ path, prefixes, extensions }} />
     </div>
   )
 }

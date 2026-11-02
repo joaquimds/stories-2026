@@ -23,22 +23,25 @@ decided against.
   lists up to five, each opening that version of the story, with a link to
   all of them. Counts printed inline were rejected as breaking up the prose,
   and the actions row is unchanged. The opening sentence has none.
-- **Map** (`/map/<story>`, linked as "map"): the story and the paths around
-  it, laid out live by a d3-force simulation: sentences are pulled out from
-  the centre by depth, held to their continuations by springs, pushed apart
-  and kept from overlapping. Each sentence starts near where it will
-  settle (on its depth's ring, in a slice of the circle sized by the
-  branches below it), so the map eases into place rather than bursting out
-  of the centre. The layout restarts only when the tree changes, not when
-  the same data arrives again after a preload. The story is dark, the
-  reader's position ringed, the beginning (the root) green, the earliest fragment shown blue when
-  the map starts later than the root, and tales' ends red (outlined
-  off the story). Where a sentence has more continuations than fit, the
-  most popular are shown, ranked exactly as on the story page. Pointing at
-  a dot (or a first tap on touch screens, or keyboard focus) shows the
-  sentence in a popover; clicking the dot (or a second tap) opens the map
-  around it, and clicking the sentence opens its story. Drag to pan, scroll
-  or buttons to zoom. How to read it is in the FAQ rather than on the page.
+- **Map** (`/map/<story>`, linked as "map"): the graph around a story,
+  one dot per sentence and a tapering line per link (wide where it leaves,
+  narrow where it arrives), so loops show as lines leading back to a dot
+  already there. It loads the story's last few sentences, the branches
+  leaving them and a few levels ahead, ranked as on the story page, and
+  grows as you explore: clicking a dot (or a second tap; Enter from the
+  keyboard) moves along the map, adding what lies beyond without
+  rebuilding it, and the camera glides there. The earliest of the story's
+  sentences shown is blue until the map reaches the beginning (the root,
+  green); clicking it loads everything leading in, two levels up. Endings
+  are red, outlined off the story. Pointing at a dot (or a first tap, or
+  focus) shows its sentence in a popover, whose text opens a story: the
+  current one up to that sentence if it is on it, the current one
+  followed on if it continues it, otherwise the story it was written in.
+  "+N" counts continuations not loaded yet. Laid out live by d3-force:
+  springs along links, dots pushed apart, a gentle pull to the middle;
+  new dots start beside their neighbours and placed ones stay put. Drag to
+  pan, scroll or buttons to zoom. How to read it is in the FAQ rather than
+  on the page.
 - **Share images** (`/og/<story>`): each story's link preview shows its title
   and opening in EB Garamond. The SVG is laid out by hand, wrapping text
   with glyph widths read from the font file, and drawn to PNG by resvg, the
