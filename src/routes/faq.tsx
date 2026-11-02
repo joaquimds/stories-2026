@@ -57,11 +57,11 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
     question: 'How do I read the map?',
     answer: (
       <p>
-        Every story has a map, found under the story text. The path you are on
-        is drawn darker, with a ring where you are. Hover over (or tap) points
-        to read the associated fragments, and click them (or tap again) to move
-        there. Paths that loop lead back to a point already on the map, and{' '}
-        {'"+"'} with a number is displayed if there are more hidden paths to
+        Every story has a map, found at the top right of the story. The path you
+        are on is drawn darker, with a ring where you are. Hover over (or tap)
+        points to read the associated fragments, and click them (or tap again)
+        to move there. Paths that loop lead back to a point already on the map,
+        and {'"+"'} with a number is displayed if there are more hidden paths to
         explore here. Moving to a point also shows what leads to it. The
         beginning is green and endings are red; a blue point marks where the map
         starts.

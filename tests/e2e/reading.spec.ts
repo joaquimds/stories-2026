@@ -176,7 +176,7 @@ test('maps the branches around a story', async ({ page }) => {
   // The layout settles at once, so the dots hold still to be clicked
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/s/The_Bridge')
-  await page.getByRole('link', { name: 'map', exact: true }).click()
+  await page.getByRole('link', { name: '(map)' }).click()
   await expect(page).toHaveURL('/map/The_Bridge')
   await expect(
     page.getByRole('heading', { name: 'Map of The Bridge' }),

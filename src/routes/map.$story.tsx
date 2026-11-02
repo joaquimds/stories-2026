@@ -22,7 +22,7 @@ function MapPage() {
     Route.useLoaderData()
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
+      <div className="title-row">
         <h1>{title ? `Map of ${title}` : 'Map'}</h1>
         <Link to={permalink}>(back to the story)</Link>
       </div>

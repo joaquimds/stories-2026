@@ -110,7 +110,12 @@ export const StoryText = ({ story, user }: Props) => {
 
   return (
     <>
-      {story.title ? <h1>{story.title}</h1> : null}
+      <div className={`title-row ${styles.heading}`}>
+        {story.title ? <h1>{story.title}</h1> : null}
+        <Link to="/map/$story" params={{ story: storyParam(story.permalink) }}>
+          (map)
+        </Link>
+      </div>
       {lines.map((line, i) => (
         <div key={`${i}-${line.id}`} className={styles.content}>
           {editing?.index === line.index ? (
@@ -314,25 +319,17 @@ export const StoryText = ({ story, user }: Props) => {
               report
             </button>
           ) : null}
+          <a
+            download={`${story.title ?? 'story'}.txt`}
+            href={`data:text/plain;charset=utf-8,${encodeURIComponent(
+              lines.map((l) => l.content).join('\n\n'),
+            )}`}
+            className={styles.download}
+          >
+            download
+          </a>
         </div>
       )}
-      <div className={styles.actions}>
-        <a
-          download={`${story.title ?? 'story'}.txt`}
-          href={`data:text/plain;charset=utf-8,${encodeURIComponent(
-            lines.map((l) => l.content).join('\n\n'),
-          )}`}
-        >
-          download
-        </a>
-        <Link
-          to="/map/$story"
-          params={{ story: storyParam(story.permalink) }}
-          className={styles.map}
-        >
-          map
-        </Link>
-      </div>
       {error ? <small className="error">{error}</small> : null}
     </>
   )
