@@ -8,7 +8,7 @@ import { clientIp, currentUser } from '../auth/request.ts'
 import { db } from '../db/index.ts'
 import { setLike } from '../data/likes.ts'
 import { linkSentence, unlinkSentence } from '../data/links.ts'
-import { loadDefaultParents, resolveStory } from '../data/paths.ts'
+import { resolveStory } from '../data/paths.ts'
 import { getStoryMap } from '../data/map.ts'
 import { randomStory } from '../data/random.ts'
 import { reportSentence } from '../data/reports.ts'
@@ -127,8 +127,9 @@ export const getRandomStory = createServerFn({ method: 'GET' }).handler(() =>
   randomStory(db()),
 )
 
-// The graph around a story, for the map: its sentences and links, the
-// story's own sentences, and where each step along it leads
+// The graph around a story, for the map, built from the story page's own
+// data: the story and the address of each point on it (getStory), the
+// step forward (getChildren), and what leads into where you are
 export const getMap = createServerFn({ method: 'GET' })
   .validator(z.object({ story }))
   .handler(async ({ data }) => {
@@ -146,14 +147,13 @@ export const getMap = createServerFn({ method: 'GET' })
     for (const line of view.lines) {
       prefixes[line.index] = line.permalink
     }
-    // What each of the story's sentences was written after, for writing
-    // the threads of routes onwards from it
-    const defaults = await loadDefaultParents(database, resolved.sentenceIds)
     return {
       graph,
       path: resolved.sentenceIds,
       prefixes,
-      pathDefaults: Object.fromEntries(defaults),
+      // What each of the story's sentences was written after, for writing
+      // the addresses of walks onwards from it
+      pathDefaults: Object.fromEntries(resolved.defaults),
       permalink: view.permalink,
       title: view.title,
     }

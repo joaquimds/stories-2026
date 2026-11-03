@@ -198,10 +198,12 @@ test('maps the branches around a story', async ({ page }) => {
     .getByRole('link', { name: /She took the left path/ })
   await expect(sentence).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/s\//)
+  // The shortest walk from the clearing goes on round the loop, back
+  // through the garden to the left path, rather than three steps back
+  await expect(page).toHaveURL(/\/s\/\d+\.\d+-\d+/)
   await expect(
     page.locator('main').getByText('She took the left path'),
-  ).toBeVisible()
+  ).toHaveCount(2)
 })
 
 test('loads what leads into the earliest sentence on a map', async ({

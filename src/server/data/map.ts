@@ -7,19 +7,18 @@ import {
   loadDefaultParents,
   pathPermalinks,
 } from './paths.ts'
-import { popularOrder, popularityScores } from './rules.ts'
-import { maskContent } from './sentences.ts'
+import { loadSentences } from './sentences.ts'
+import { getChildren } from './stories.ts'
 
-// How much of the graph around a story to load at once: a step either
-// way from the current sentence, so moving around feels like walking
+// How much of the graph around a story to load at once: the story's last
+// few sentences, and a step either way from the current one, so moving
+// around feels like walking. The step forward is the story page's first
+// page of continuations.
 export const MAP_LIMITS = {
   // Sentences of the story itself, ending at the current one
   trunk: 5,
-  // Continuations loaded of the current sentence, the most popular first
-  children: 8,
   // Sentences loaded that lead into the current one
   parents: 8,
-  fragments: 150,
 }
 
 // One sentence on the map, however many routes lead to it
@@ -40,44 +39,50 @@ export type MapFragment = {
 // sentence already on the map
 export type MapLink = { from: number; to: number }
 
-export type MapGraph = { fragments: MapFragment[]; links: MapLink[] }
+export type MapGraph = {
+  fragments: MapFragment[]
+  links: MapLink[]
+  // Where each continuation of the current sentence leads, exactly as on
+  // the story page
+  steps: Record<number, string>
+}
 
-// Sentence details for the map
+// Sentence details for the map: content as the story page shows it, how
+// many continuations each has, its own story and what it was written after
 const describe = async (db: Db, ids: number[]): Promise<MapFragment[]> => {
   if (!ids.length) {
     return []
   }
-  const rows = await db
-    .selectFrom('sentences as s')
-    .innerJoin('paths as origin', (join) =>
-      join
-        .onRef('origin.sentence_id', '=', 's.id')
-        .on(
-          sql<boolean>`origin.parent_id is not distinct from s.written_under_path_id`,
-        ),
-    )
-    .select((eb) => [
-      's.id',
-      's.content',
-      's.deleted_at',
-      'origin.id as origin_path_id',
-      eb
-        .selectFrom('links as l')
-        .innerJoin('sentences as t', 't.id', 'l.to_sentence_id')
-        .whereRef('l.from_sentence_id', '=', 's.id')
-        .where('t.deleted_at', 'is', null)
-        .select(sql<number>`count(*)::int`.as('n'))
-        .as('continuations'),
-    ])
-    .where('s.id', 'in', ids)
-    .execute()
-  const [origins, defaults] = await Promise.all([
-    pathPermalinks(
-      db,
-      rows.map((r) => r.origin_path_id),
-    ),
+  const [sentences, rows, defaults] = await Promise.all([
+    loadSentences(db, ids),
+    db
+      .selectFrom('sentences as s')
+      .innerJoin('paths as origin', (join) =>
+        join
+          .onRef('origin.sentence_id', '=', 's.id')
+          .on(
+            sql<boolean>`origin.parent_id is not distinct from s.written_under_path_id`,
+          ),
+      )
+      .select((eb) => [
+        's.id',
+        'origin.id as origin_path_id',
+        eb
+          .selectFrom('links as l')
+          .innerJoin('sentences as t', 't.id', 'l.to_sentence_id')
+          .whereRef('l.from_sentence_id', '=', 's.id')
+          .where('t.deleted_at', 'is', null)
+          .select(sql<number>`count(*)::int`.as('n'))
+          .as('continuations'),
+      ])
+      .where('s.id', 'in', ids)
+      .execute(),
     loadDefaultParents(db, ids),
   ])
+  const origins = await pathPermalinks(
+    db,
+    rows.map((r) => r.origin_path_id),
+  )
   const byId = new Map(rows.map((r) => [r.id, r]))
   return ids.flatMap((id) => {
     const r = byId.get(id)
@@ -87,7 +92,7 @@ const describe = async (db: Db, ids: number[]): Promise<MapFragment[]> => {
     return [
       {
         id,
-        content: id === ROOT_ID ? '' : maskContent(r.content, r.deleted_at),
+        content: id === ROOT_ID ? '' : (sentences.get(id)?.content ?? ''),
         continuations: r.continuations ?? 0,
         origin: origins.get(r.origin_path_id)?.permalink ?? '/',
         defaultParent: defaults.get(id) ?? null,
@@ -123,8 +128,7 @@ const collector = () => {
 }
 
 // The graph around a story: its last few sentences, then one step either
-// way from the current one, everything it leads to and everything leading
-// into it. Each sentence appears once; a route that comes back to one
+// way from the current one, what it leads to and what leads into it. Each sentence appears once; a route that comes back to one
 // already found shows as a link to it.
 export const getStoryMap = async (
   db: Db,
@@ -141,27 +145,13 @@ export const getStoryMap = async (
     }
   }
 
-  // One step on from the current sentence, ranked as on the story page
+  // One step on: the story page's continuations, ranked and addressed by
+  // the same function
   const current = present(all.at(-1))
-  const { rows } = await sql<{ sentence_id: number }>`
-    with recursive ${popularityScores(sql`
-      select 0 as grp, ${story.pathIds.at(-1) ?? null}::bigint as parent_path,
-        l.to_sentence_id as sentence_id
-      from app.links l
-      join app.sentences s on s.id = l.to_sentence_id
-      where l.from_sentence_id = ${current} and s.deleted_at is null
-    `)}
-    select cand.sentence_id
-    from cand
-    left join scores using (grp, sentence_id)
-    order by ${popularOrder}
-  `.execute(db)
-  for (const { sentence_id: id } of rows.slice(0, limits.children)) {
-    if (!found.has(id) && found.ids.length >= limits.fragments) {
-      break
-    }
-    found.link(current, id)
-    found.add(id)
+  const { page } = await getChildren(db, story, { order: 'popular' })
+  for (const child of page.items) {
+    found.link(current, child.sentenceId)
+    found.add(child.sentenceId)
   }
 
   // One step back: what leads into the current sentence, the story's
@@ -181,9 +171,6 @@ export const getStoryMap = async (
     ...leadingIn.filter((p) => p.id !== previous),
   ]
   for (const { id } of parents.slice(0, limits.parents)) {
-    if (!found.has(id) && found.ids.length >= limits.fragments) {
-      break
-    }
     found.link(id, current)
     found.add(id)
   }
@@ -191,5 +178,8 @@ export const getStoryMap = async (
   return {
     fragments: await describe(db, found.ids),
     links: found.links,
+    steps: Object.fromEntries(
+      page.items.map((child) => [child.sentenceId, child.permalink]),
+    ),
   }
 }

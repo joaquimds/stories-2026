@@ -4,6 +4,7 @@ import { setLike } from '../../src/server/data/likes.ts'
 import { linkSentence } from '../../src/server/data/links.ts'
 import { type MapGraph, getStoryMap } from '../../src/server/data/map.ts'
 import { getChildren } from '../../src/server/data/stories.ts'
+import { setTitle } from '../../src/server/data/titles.ts'
 import {
   createUser,
   leafOf,
@@ -12,12 +13,7 @@ import {
   writeChain,
 } from './helpers.ts'
 
-const limits = {
-  trunk: 3,
-  children: 2,
-  parents: 8,
-  fragments: 50,
-}
+const limits = { trunk: 3, parents: 8 }
 
 // Lookups by content, for readable tests
 const view = (graph: MapGraph) => {
@@ -46,7 +42,7 @@ describe('getStoryMap', () => {
       // A branch off the story, not shown until you walk there
       await writeChain(trx, ana, b, 'C2')
       // Ahead of D: three continuations, one of them going further
-      await writeChain(trx, ana, d, 'E', 'F')
+      const [e] = await writeChain(trx, ana, d, 'E', 'F')
       await writeChain(trx, ana, d, 'E2')
       await writeChain(trx, ana, d, 'E3')
 
@@ -58,8 +54,9 @@ describe('getStoryMap', () => {
       expect(after('B')).toEqual(['C'])
       expect(byContent('C')?.origin).toBe(`/s/${c}`)
       expect(byContent('C2')).toBeUndefined()
-      // One step ahead: two of the three continuations, no further
-      expect(after('D')).toEqual(['E', 'E2'])
+      // One step ahead, as the story page lists it, and no further
+      expect(after('D')).toEqual(['E', 'E2', 'E3'])
+      expect(graph.steps[leafOf(e)]).toBe(`/s/${e}`)
       expect(byContent('D')).toMatchObject({ continuations: 3 })
       expect(byContent('F')).toBeUndefined()
       expect(byContent('E')).toMatchObject({ continuations: 1 })
@@ -87,14 +84,14 @@ describe('getStoryMap', () => {
       await writeChain(trx, bob, quiet, 'Continued')
 
       const graph = await getStoryMap(trx, await resolved(trx, a), limits)
-      // Liked by three people in all, Quiet by two, Old by one; two shown
-      expect(view(graph).after('A')).toEqual(['Liked', 'Quiet'])
+      // Liked by three people in all, Quiet by two, Old by one
+      expect(view(graph).after('A')).toEqual(['Liked', 'Quiet', 'Old'])
       expect(view(graph).byContent('A')).toMatchObject({ continuations: 3 })
     }),
   )
 
   it(
-    'ranks continuations exactly as the story page does',
+    'takes its step forward from the story page, ranking and addresses alike',
     rollback(async (trx) => {
       const [ana, bob, cat, dan] = [
         await createUser(trx),
@@ -117,12 +114,21 @@ describe('getStoryMap', () => {
       await setLike(trx, cat, { story: thread, liked: true })
       await setLike(trx, dan, { story: thread, liked: true })
 
+      // A titled continuation keeps its title's address
+      await setTitle(trx, ana, { story: here, title: 'Here' })
+
       const story = await resolved(trx, a)
       const page = await getChildren(trx, story, { order: 'popular' })
-      const graph = await getStoryMap(trx, story, { ...limits, children: 8 })
+      const graph = await getStoryMap(trx, story, limits)
       const onMap = view(graph).after('A')
       expect(onMap).toEqual(page.page.items.map((i) => i.content))
       expect(onMap).toEqual(['Popular here', 'Popular elsewhere', 'Unread'])
+      expect(graph.steps).toEqual(
+        Object.fromEntries(
+          page.page.items.map((i) => [i.sentenceId, i.permalink]),
+        ),
+      )
+      expect(graph.steps[leafOf(here)]).toBe('/s/Here')
     }),
   )
 

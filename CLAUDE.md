@@ -7,9 +7,9 @@ been built and decided.
 
 - **Consistency is key.** The same thing behaves the same way everywhere.
   Share one implementation rather than writing a second that is "close
-  enough": for example, continuations are ranked by one function
-  (`popularityScores` in `src/server/data/rules.ts`) on both the story page
-  and the map, with a test holding them together. When something new
+  enough": for example, the map takes its step forward from the story
+  page's own `getChildren`, so continuations are ranked and addressed the
+  same way in both. When something new
   resembles something existing, reuse it or make them match, and say so.
 - **Exploration and discovery.** The site doesn't explain itself on its
   pages: no legends, hints or "how it works" text. Answers belong in the

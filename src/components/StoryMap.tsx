@@ -404,9 +404,10 @@ export const StoryMap = ({
           graph.fragments.get(id)?.defaultParent ?? pathDefaults[id] ?? null,
         path,
         prefixes,
+        steps: loaded.steps,
         first,
       }),
-    [graph, path, prefixes, pathDefaults, first],
+    [graph, path, prefixes, pathDefaults, loaded.steps, first],
   )
   const target = (fragment: MapFragment) =>
     targets.get(fragment.id) ?? fragment.origin

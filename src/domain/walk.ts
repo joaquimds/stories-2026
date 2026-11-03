@@ -1,84 +1,81 @@
 import { present } from './present.ts'
 import { encodeThread, permalink } from './thread.ts'
 
-// Where each sentence on the map leads, so moving around it is walking:
-// - a sentence that follows where you are is the next step, even when the
-//   story has already been through it (a loop);
-// - any other sentence on the story goes back to it along the story (its
-//   latest appearance, if the story loops through it);
-// - any other goes on along the shortest route loaded, from the latest
-//   point on the story that has one, so the story so far is kept;
-// - a sentence with no route from the story is left out, for its own story.
-// `first` is the earliest point on the story that is loaded.
+// Where each sentence on the map leads: the shortest walk there from where
+// you are, over the links the map shows. A step back along the story counts
+// the same as a step forward, and a tie goes forward. A walk back to a
+// point on the story, or one step on, has the address the story page gives
+// it; longer walks are written out here. A sentence with no walk is left
+// out, for its own story.
+//
+// `first` is the earliest point on the story the map has loaded, and
+// `steps` the addresses of the current sentence's continuations.
 export const walkTargets = ({
   links,
   defaultParent,
   path,
   prefixes,
+  steps,
   first,
 }: {
   links: Iterable<{ from: number; to: number }>
   defaultParent: (sentenceId: number) => number | null
   path: number[]
   prefixes: string[]
+  steps: Record<number, string>
   first: number
 }) => {
-  const targets = new Map<number, string>()
   const after = new Map<number, number[]>()
   for (const { from, to } of links) {
     after.set(from, [...(after.get(from) ?? []), to])
   }
-  const onward = (start: number, route: number[]) => {
-    try {
-      return permalink(
-        encodeThread([...path.slice(0, start + 1), ...route], defaultParent),
-      )
-    } catch {
-      // Not a story that can be written down; left to its own
-      return undefined
-    }
-  }
-  // One step on from where you are comes first
   const end = path.length - 1
-  for (const to of after.get(present(path[end])) ?? []) {
-    const link = onward(end, [to])
-    if (link) {
-      targets.set(to, link)
-    }
-  }
-  for (const [i, id] of path.entries()) {
-    if (!targets.has(id) || i === end) {
-      targets.set(id, prefixes[i] ?? '/')
-    }
-  }
-  for (let start = path.length - 1; start >= first; start--) {
-    const from = present(path[start])
-    // Breadth first, so each route found is a shortest one
-    const previous = new Map<number, number>([[from, from]])
-    let level = [from]
-    while (level.length) {
+  // The best walk found to each sentence: back to point `at` on the story,
+  // then on along `route`
+  const best = new Map<number, { cost: number; at: number; route: number[] }>()
+  // Nearest points first, so that a tie keeps the walk with fewer steps back
+  for (let at = end; at >= first; at--) {
+    const back = end - at
+    const start = present(path[at])
+    const routes = new Map<number, number[]>([[start, []]])
+    let level = [start]
+    for (let distance = 0; level.length; distance++) {
       const next: number[] = []
       for (const id of level) {
+        const route = present(routes.get(id))
+        const known = best.get(id)
+        if (!known || back + distance < known.cost) {
+          best.set(id, { cost: back + distance, at, route })
+        }
         for (const to of after.get(id) ?? []) {
-          if (previous.has(to)) {
-            continue
-          }
-          previous.set(to, id)
-          next.push(to)
-          if (targets.has(to)) {
-            continue
-          }
-          const route = [to]
-          for (let at = id; at !== from; at = present(previous.get(at))) {
-            route.unshift(at)
-          }
-          const link = onward(start, route)
-          if (link) {
-            targets.set(to, link)
+          if (!routes.has(to)) {
+            routes.set(to, [...route, to])
+            next.push(to)
           }
         }
       }
       level = next
+    }
+  }
+
+  const targets = new Map<number, string>()
+  for (const [id, { at, route }] of best) {
+    const step = at === end && route.length === 1 ? steps[id] : undefined
+    if (!route.length) {
+      targets.set(id, prefixes[at] ?? '/')
+    } else if (step) {
+      targets.set(id, step)
+    } else {
+      try {
+        targets.set(
+          id,
+          permalink(
+            encodeThread([...path.slice(0, at + 1), ...route], defaultParent),
+          ),
+        )
+      } catch {
+        // Not a story that can be written down; left to its own
+      }
     }
   }
   return targets
