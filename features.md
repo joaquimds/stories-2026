@@ -18,7 +18,11 @@ decided against.
 
 ### Reading
 
-- **Fork icons**: a faint path icon in the margin beside sentences that have
+- **Cards as links**: cards with fragments on them (continuations, the
+  library and other story lists, recent) are links as a whole: the card's
+  shadow deepens when pointed at or focused, and other links on it, like an
+  author's name, stay clickable (`.link-card` in `global.css`).
+- **Fork icons**: a path icon (grey, black when open) in the margin beside sentences that have
   alternatives (other continuations of the sentence before). Clicking it
   lists up to five, each opening that version of the story, with a link to
   all of them. Counts printed inline were rejected as breaking up the prose,
@@ -53,7 +57,7 @@ decided against.
   always, on screens without hover), which turns to face the pointer.
   Clicking it (or Enter) brings out a dashed arrow: landing it on a dot
   links to it (what can't be linked fades: the beginning, what already
-  follows, everything when logged out; a touch shows "link here" first),
+  follows, everything when logged out; a touch shows "(link here)", in green, first),
   and landing it in empty space opens a card to write in there, closed by
   its × or Escape with the draft kept; the new dot starts where the arrow
   landed. Escape or a right click puts the arrow away, and a drag still
@@ -91,19 +95,10 @@ decided against.
 
 ## To do
 
-Small things noted for later:
-
-- **Cards as whole links.** Cards with fragments on them (the story page's
-  continuations, the library and other lists) should be links as a whole,
-  not just their sentence: the text no longer underlines on hover, and the
-  card itself shows it is hovered or focused and can be clicked.
-- **More room for the fork icons.** Slightly more horizontal padding in the
-  story view, and the map view to match, so the fork icons aren't cramped.
-- **Darker light icons.** The fork icons, and any other very light icons, a
-  little darker so they're easy to see; and a review of the theme colours,
-  to keep the set minimal.
-- **Even spacing in the fork list.** Equal top and bottom margins on the
-  list, and no bottom margin on its last item.
+- **Review the theme colours**, to keep the set minimal: `grey-tint` is used
+  once (the grey button), the loading bar uses a stray `#29d`, and
+  `grey-medium` is left only for the map's off-path lines and the stats
+  bars now that the fork icons use `grey-dark`.
 
 ## Not yet
 

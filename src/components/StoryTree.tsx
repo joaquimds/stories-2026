@@ -68,9 +68,11 @@ export const StoryTree = ({
             <ul className={styles.children}>
               {childPage.items.map((child) => (
                 <li key={child.key}>
-                  <div className={styles.card}>
+                  <div className={`${styles.card} link-card`}>
                     <p>
-                      <Link to={child.permalink}>{child.content}</Link>
+                      <Link to={child.permalink} className="card-link">
+                        {child.content}
+                      </Link>
                     </p>
                   </div>
                 </li>

@@ -1087,11 +1087,11 @@ export const StoryMap = ({
             <div className={styles.actions}>
               <button
                 type="button"
-                className="link"
+                className={`link ${styles.go}`}
                 disabled={writing.busy}
                 onClick={() => linkTo(popover.fragment.id)}
               >
-                link here
+                (link here)
               </button>
             </div>
           ) : null}

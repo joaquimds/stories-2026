@@ -9,7 +9,7 @@
 .fork {
   background: none;
   border: none;
-  color: var(--color-grey-medium);
+  color: var(--color-grey-dark);
   left: calc(-1 * var(--spacing-2));
   line-height: 0;
   padding: 1px;
@@ -19,18 +19,22 @@
   &:hover,
   &:focus-visible,
   &.fork-open {
-    color: var(--color-grey-dark);
+    color: var(--color-black);
   }
 }
 
 .alternatives {
   border-left: 1px solid var(--color-grey-light);
   font-style: italic;
-  margin: var(--spacing-0) 0 var(--spacing-1);
+  margin: var(--spacing-1) 0;
   padding-left: var(--spacing-1);
 
   li {
     margin-bottom: var(--spacing-0);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
   }
 
   a {

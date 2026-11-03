@@ -14,10 +14,12 @@ export const StoryCards = ({ page, toSearch }: Props) =>
     <>
       <ul className={styles.list}>
         {page.items.map((story) => (
-          <li key={story.pathId} className={styles.story}>
+          <li key={story.pathId} className={`${styles.story} link-card`}>
             {story.title ? <h2>{story.title}</h2> : null}
             <p>
-              <Link to={story.permalink}>{story.keySentences.join(' → ')}</Link>
+              <Link to={story.permalink} className="card-link">
+                {story.keySentences.join(' → ')}
+              </Link>
             </p>
           </li>
         ))}

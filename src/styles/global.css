@@ -36,6 +36,11 @@
   /* Text boxes are typed into, like paper in a typewriter */
   --font-typewriter: 'Courier Prime', 'Courier New', monospace;
   --card-shadow: 0 0 var(--spacing-1) var(--color-grey-dark);
+  /* A card's shadow when it is pointed at or focused */
+  --card-shadow-active: 0 0 var(--spacing-1) var(--color-black);
+  /* The sides of the story's book and the map, with room for the fork
+     icons in the margin */
+  --book-padding: calc(var(--spacing-2) + var(--spacing-1));
   --max-width: 720px;
 }
 
@@ -120,6 +125,38 @@ a {
   position: absolute;
   transform: translateX(-50%);
   z-index: 1;
+}
+
+/* A card that is a link as a whole: its main link (.card-link) stretches
+   over it, so the card shows it is pointed at or focused instead of the
+   text underlining; other links on the card stay clickable above it */
+.link-card {
+  position: relative;
+
+  &:hover,
+  &:has(.card-link:focus-visible) {
+    box-shadow: var(--card-shadow-active);
+  }
+
+  .card-link {
+    text-decoration: none;
+
+    &::after {
+      border-radius: inherit;
+      content: '';
+      inset: 0;
+      position: absolute;
+    }
+
+    &:focus-visible {
+      outline: none;
+    }
+  }
+
+  a:not(.card-link) {
+    position: relative;
+    z-index: 1;
+  }
 }
 
 /* Buttons */

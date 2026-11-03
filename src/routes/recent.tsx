@@ -47,12 +47,14 @@ function Recent() {
         <>
           <ul className={styles.list}>
             {page.items.map((item) => (
-              <li key={item.id} className={styles.item}>
+              <li key={item.id} className={`${styles.item} link-card`}>
                 {item.previous ? (
                   <p className={styles.previous}>… {item.previous}</p>
                 ) : null}
                 <p className={styles.content}>
-                  <Link to={item.permalink}>{item.content}</Link>
+                  <Link to={item.permalink} className="card-link">
+                    {item.content}
+                  </Link>
                 </p>
                 <p className={styles.meta}>
                   <AuthorLink name={item.authorName} />,{' '}
