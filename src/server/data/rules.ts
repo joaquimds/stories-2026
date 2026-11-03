@@ -3,10 +3,12 @@ import { type RawBuilder, sql } from 'kysely'
 import type { Db } from '../db/index.ts'
 
 // Sentences that nobody other than their author has a write, like or title
-// contribution at or below any path ending at the sentence.
+// contribution at or below any path ending at the sentence; with `authorId`,
+// only that author's.
 export const editableSentences = async (
   db: Db,
   sentenceIds: number[],
+  authorId?: number,
 ): Promise<Set<number>> => {
   if (!sentenceIds.length) {
     return new Set()
@@ -21,6 +23,7 @@ export const editableSentences = async (
     select s.id from app.sentences s
     where s.id = any(${sentenceIds}::bigint[])
       and s.deleted_at is null
+      ${authorId === undefined ? sql`` : sql`and s.author_id = ${authorId}`}
       and not exists (
         select 1 from sub
         join app.contributions c on c.path_id = sub.id

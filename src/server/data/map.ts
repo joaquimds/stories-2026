@@ -2,12 +2,8 @@ import { sql } from 'kysely'
 import { ROOT_ID } from '../../domain/thread.ts'
 import { present } from '../../domain/present.ts'
 import type { Db } from '../db/index.ts'
-import {
-  type ResolvedStory,
-  loadDefaultParents,
-  pathPermalinks,
-} from './paths.ts'
-import { loadSentences } from './sentences.ts'
+import { type ResolvedStory, originPermalinks } from './paths.ts'
+import { maskContent } from './sentences.ts'
 import { getChildren } from './stories.ts'
 
 // One sentence on the map, however many routes lead to it
@@ -36,26 +32,22 @@ export type MapGraph = {
   steps: Record<number, string>
 }
 
-// Sentence details for the map: content as the story page shows it, how
-// many continuations each has, its own story and what it was written after
+// Sentence details for the map, in two queries side by side: content as
+// the story page shows it, how many continuations each has and what it was
+// written after; and the address of the story each was written in
 const describe = async (db: Db, ids: number[]): Promise<MapFragment[]> => {
   if (!ids.length) {
     return []
   }
-  const [sentences, rows, defaults] = await Promise.all([
-    loadSentences(db, ids),
+  const [rows, origins] = await Promise.all([
     db
       .selectFrom('sentences as s')
-      .innerJoin('paths as origin', (join) =>
-        join
-          .onRef('origin.sentence_id', '=', 's.id')
-          .on(
-            sql<boolean>`origin.parent_id is not distinct from s.written_under_path_id`,
-          ),
-      )
+      .leftJoin('paths as dp', 'dp.id', 's.written_under_path_id')
       .select((eb) => [
         's.id',
-        'origin.id as origin_path_id',
+        's.content',
+        's.deleted_at',
+        'dp.sentence_id as default_parent',
         eb
           .selectFrom('links as l')
           .innerJoin('sentences as t', 't.id', 'l.to_sentence_id')
@@ -66,12 +58,8 @@ const describe = async (db: Db, ids: number[]): Promise<MapFragment[]> => {
       ])
       .where('s.id', 'in', ids)
       .execute(),
-    loadDefaultParents(db, ids),
+    originPermalinks(db, ids),
   ])
-  const origins = await pathPermalinks(
-    db,
-    rows.map((r) => r.origin_path_id),
-  )
   const byId = new Map(rows.map((r) => [r.id, r]))
   return ids.flatMap((id) => {
     const r = byId.get(id)
@@ -81,10 +69,10 @@ const describe = async (db: Db, ids: number[]): Promise<MapFragment[]> => {
     return [
       {
         id,
-        content: id === ROOT_ID ? '' : (sentences.get(id)?.content ?? ''),
+        content: id === ROOT_ID ? '' : maskContent(r.content, r.deleted_at),
         continuations: r.continuations ?? 0,
-        origin: origins.get(r.origin_path_id)?.permalink ?? '/',
-        defaultParent: defaults.get(id) ?? null,
+        origin: origins.get(id) ?? '/',
+        defaultParent: r.default_parent,
       },
     ]
   })

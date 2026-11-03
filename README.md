@@ -139,6 +139,12 @@ Choices that aren't obvious from the code, mostly made while rebuilding the
   once `SITE_URL` is https) are set in `server.ts` on every response. There
   is no Content Security Policy yet: the app's hydration uses inline
   scripts.
+- **Server-Timing**: every response reports its total time, its time on
+  the database and how many queries it ran (`src/server/timing.ts`), so
+  the browser's network panel shows where a slow request spends it. Pages
+  keep queries side by side rather than one after another: the server and
+  database are a long round trip apart in production, so each query that
+  waits on another adds that trip again.
 - **After a deploy**, a tab opened before it can ask for a page's code by
   its old file name. The root error screen recognises that one error and
   reloads the page instead, once per tab (sharing the router's own note);

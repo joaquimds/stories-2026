@@ -17,7 +17,6 @@ import {
 import {
   type DefaultParents,
   type ResolvedStory,
-  loadDefaultParents,
   permalink,
   threadOf,
 } from './paths.ts'
@@ -27,7 +26,7 @@ import {
   popularOrder,
   popularityScores,
 } from './rules.ts'
-import { type SentenceRow, loadSentences } from './sentences.ts'
+import { type SentenceRow, loadSentences, maskContent } from './sentences.ts'
 import { last, present } from '../../domain/present.ts'
 
 export type Viewer = { id: number; name: string } | null
@@ -73,33 +72,32 @@ export const getStory = async (
   const leafPathId = pathIds.at(-1) ?? null
   const knownPathIds = pathIds.filter((id): id is number => id !== null)
 
-  const [sentences, titles, like] = await Promise.all([
-    loadSentences(db, sentenceIds),
-    knownPathIds.length
-      ? db
-          .selectFrom('titles')
-          .select(['path_id', 'slug', 'title'])
-          .where('path_id', 'in', knownPathIds)
-          .execute()
-      : [],
-    viewer && leafPathId
-      ? db
-          .selectFrom('likes')
-          .select('path_id')
-          .where('user_id', '=', viewer.id)
-          .where('path_id', '=', leafPathId)
-          .executeTakeFirst()
-      : undefined,
-  ])
+  // Everything at once: no query here waits on another
+  const [sentences, titles, like, editable, forks, unlinkable] =
+    await Promise.all([
+      loadSentences(db, sentenceIds),
+      knownPathIds.length
+        ? db
+            .selectFrom('titles')
+            .select(['path_id', 'slug', 'title'])
+            .where('path_id', 'in', knownPathIds)
+            .execute()
+        : [],
+      viewer && leafPathId
+        ? db
+            .selectFrom('likes')
+            .select('path_id')
+            .where('user_id', '=', viewer.id)
+            .where('path_id', '=', leafPathId)
+            .executeTakeFirst()
+        : undefined,
+      viewer
+        ? editableSentences(db, sentenceIds, viewer.id)
+        : new Set<number>(),
+      loadForks(db, sentenceIds, defaults),
+      viewer ? canUnlink(db, viewer, resolved) : false,
+    ])
   const titleByPath = new Map(titles.map((t) => [t.path_id, t]))
-
-  const ownSentenceIds = viewer
-    ? sentenceIds.filter((id) => sentences.get(id)?.author?.id === viewer.id)
-    : []
-  const [editable, forks] = await Promise.all([
-    editableSentences(db, ownSentenceIds),
-    loadForks(db, sentenceIds, defaults),
-  ])
 
   const lines = sentenceIds.flatMap((id, i): StoryLine[] => {
     if (id === ROOT_ID) {
@@ -141,7 +139,7 @@ export const getStory = async (
     title: title?.title ?? null,
     lines,
     liked: Boolean(like),
-    canUnlink: viewer ? await canUnlink(db, viewer, resolved) : false,
+    canUnlink: unlinkable,
     isLeafAuthor: Boolean(viewer && leaf?.author?.id === viewer.id),
   }
 }
@@ -164,10 +162,17 @@ const loadForks = async (
   if (!positions.length) {
     return forks
   }
+  // With each alternative's default parent, for writing its thread
   const rows = await db
     .selectFrom('links as l')
     .innerJoin('sentences as c', 'c.id', 'l.to_sentence_id')
-    .select(['l.from_sentence_id as parent', 'c.id', 'c.content'])
+    .leftJoin('paths as dp', 'dp.id', 'c.written_under_path_id')
+    .select([
+      'l.from_sentence_id as parent',
+      'c.id',
+      'c.content',
+      'dp.sentence_id as default_parent',
+    ])
     .where(
       'l.from_sentence_id',
       'in',
@@ -187,12 +192,9 @@ const loadForks = async (
       shown.set(index, others)
     }
   }
-  const optionIds = [...shown.values()].flatMap((others) =>
-    others.slice(0, FORK_OPTIONS).map((c) => c.id),
-  )
   const allDefaults = new Map([
     ...defaults,
-    ...(await loadDefaultParents(db, optionIds)),
+    ...rows.map((r): [number, number | null] => [r.id, r.default_parent]),
   ])
   for (const [index, others] of shown) {
     forks.set(index, {
@@ -266,75 +268,90 @@ export const getChildren = async (
 ): Promise<{ page: Page<ChildItem>; count: number }> => {
   const candidates = candidatesSql(story)
   const leafPathId = story.pathIds.at(-1) ?? null
-  let page: Page<Candidate>
-  if (params.order === 'popular') {
-    const { rows } = await sql<Candidate>`
-      with recursive ${popularityScores(
-        sql`select 0 as grp, ${leafPathId}::bigint as parent_path, sentence_id
-          from (${candidates}) c`,
-      )}
-      select cand.sentence_id
-      from cand left join scores using (grp, sentence_id)
-      order by ${popularOrder}
-      limit ${PAGE_SIZE + 1} offset ${popularOffset(params.page)}
-    `.execute(db)
-    page = popularPage(rows, params.page ?? 1)
-  } else {
-    const { cursor, op, direction } = keysetQuery(params)
-    const { rows } = await sql<Candidate>`
-      with cand as (${candidates})
-      select sentence_id from cand
-      ${cursor ? sql`where sentence_id ${sql.raw(op)} ${cursor}` : sql``}
-      order by sentence_id ${sql.raw(direction)}
-      limit ${PAGE_SIZE + 1}
-    `.execute(db)
-    page = keysetPage(rows, params, (c) => c.sentence_id)
+  // Each continuation on the page with what the page needs of it: its
+  // content, what it was written after (for its thread) and, if the story
+  // continued by it is titled, its slug. `pg` is the page, in order.
+  const detailed = sql`
+    select pg.sentence_id, s.content, s.deleted_at,
+      dp.sentence_id as default_parent, t.slug
+    from pg
+    join app.sentences s on s.id = pg.sentence_id
+    left join app.paths dp on dp.id = s.written_under_path_id
+    left join app.paths step
+      on step.sentence_id = s.id and step.parent_id = ${leafPathId}
+    left join app.titles t on t.path_id = step.id
+    order by pg.ord
+  `
+  type Detailed = {
+    sentence_id: number
+    content: string
+    deleted_at: Date | null
+    default_parent: number | null
+    slug: string | null
   }
-  const { rows: countRows } = await sql<{ count: number }>`
-    with cand as (${candidates}) select count(*)::int as count from cand
-  `.execute(db)
+  // The page of continuations and how many there are, side by side
+  const pageOf = async (): Promise<Page<Detailed>> => {
+    if (params.order === 'popular') {
+      const { rows } = await sql<Detailed>`
+        with recursive ${popularityScores(
+          sql`select 0 as grp, ${leafPathId}::bigint as parent_path, sentence_id
+            from (${candidates}) c`,
+        )},
+        pg as (
+          select cand.sentence_id,
+            row_number() over (order by ${popularOrder}) as ord
+          from cand left join scores using (grp, sentence_id)
+          order by ${popularOrder}
+          limit ${PAGE_SIZE + 1} offset ${popularOffset(params.page)}
+        )
+        ${detailed}
+      `.execute(db)
+      return popularPage(rows, params.page ?? 1)
+    }
+    const { cursor, op, direction } = keysetQuery(params)
+    const { rows } = await sql<Detailed>`
+      with cand as (${candidates}),
+      pg as (
+        select sentence_id,
+          row_number() over (order by sentence_id ${sql.raw(direction)}) as ord
+        from cand
+        ${cursor ? sql`where sentence_id ${sql.raw(op)} ${cursor}` : sql``}
+        order by sentence_id ${sql.raw(direction)}
+        limit ${PAGE_SIZE + 1}
+      )
+      ${detailed}
+    `.execute(db)
+    return keysetPage(rows, params, (c) => c.sentence_id)
+  }
+  const [page, { rows: countRows }] = await Promise.all([
+    pageOf(),
+    sql<{ count: number }>`
+      with cand as (${candidates}) select count(*)::int as count from cand
+    `.execute(db),
+  ])
 
-  const childIds = page.items.map((c) => c.sentence_id)
-  const sequences = childIds.map((id) => [...story.sentenceIds, id])
-  const [sentences, defaults, slugs] = await Promise.all([
-    loadSentences(db, childIds),
-    loadDefaultParents(db, sequences.flat()),
-    childSlugs(db, leafPathId, childIds),
+  const defaults = new Map([
+    ...story.defaults,
+    ...page.items.map((c): [number, number | null] => [
+      c.sentence_id,
+      c.default_parent,
+    ]),
   ])
   return {
     count: countRows[0]?.count ?? 0,
     page: {
       ...page,
-      items: childIds.map((id, i) => ({
-        key: String(id),
-        sentenceId: id,
-        content: sentences.get(id)?.content ?? '',
+      items: page.items.map((c) => ({
+        key: String(c.sentence_id),
+        sentenceId: c.sentence_id,
+        content: maskContent(c.content, c.deleted_at),
         permalink: permalink(
-          threadOf(present(sequences[i]), defaults),
-          slugs.get(id),
+          threadOf([...story.sentenceIds, c.sentence_id], defaults),
+          c.slug,
         ),
       })),
     },
   }
-}
-
-// Slugs of the children's paths that are titled
-const childSlugs = async (
-  db: Db,
-  parentPathId: number | null,
-  childIds: number[],
-) => {
-  if (!parentPathId || !childIds.length) {
-    return new Map<number, string>()
-  }
-  const rows = await db
-    .selectFrom('paths as p')
-    .innerJoin('titles as t', 't.path_id', 'p.id')
-    .select(['p.sentence_id', 't.slug'])
-    .where('p.sentence_id', 'in', childIds)
-    .where('p.parent_id', '=', parentPathId)
-    .execute()
-  return new Map(rows.map((r) => [r.sentence_id, r.slug]))
 }
 
 export type LinkCandidate = {

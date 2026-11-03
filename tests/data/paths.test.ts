@@ -4,6 +4,7 @@ import {
   ensurePath,
   pathPermalinks,
   resolvePath,
+  resolvePrefixes,
   resolveStory,
 } from '../../src/server/data/paths.ts'
 import { setTitle } from '../../src/server/data/titles.ts'
@@ -49,6 +50,32 @@ describe('resolveStory', () => {
         0,
         ...[a, b, c, b, c].map((t) => leafOf(t)),
       ])
+      // Path ids, found in the same query, match looking them up after
+      expect(story.pathIds).toEqual(
+        await resolvePrefixes(trx, story.sentenceIds),
+      )
+    }),
+  )
+
+  it(
+    'finds the path id of each point, or null where none exists yet',
+    rollback(async (trx) => {
+      const ana = await createUser(trx)
+      const [a, , c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
+      // A thread through a link nobody has followed yet: C, then A again
+      await trx
+        .insertInto('links')
+        .values({ from_sentence_id: leafOf(c), to_sentence_id: leafOf(a) })
+        .execute()
+      const story = await resolved(
+        trx,
+        `${leafOf(a)}.${leafOf(a)}-${leafOf(c)}`,
+      )
+      expect(story.pathIds).toEqual(
+        await resolvePrefixes(trx, story.sentenceIds),
+      )
+      expect(story.pathIds.at(-1)).toBeNull()
+      expect(story.pathIds.at(-2)).not.toBeNull()
     }),
   )
 
@@ -74,6 +101,9 @@ describe('resolveStory', () => {
       expect(slug).toBe('A_Tale')
       const story = await resolved(trx, 'A_Tale')
       expect(story.thread).toBe(b)
+      expect(story.pathIds).toEqual(
+        await resolvePrefixes(trx, story.sentenceIds),
+      )
     }),
   )
 })

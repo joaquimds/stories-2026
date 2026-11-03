@@ -1,6 +1,7 @@
 import { Kysely, PostgresDialect, WithSchemaPlugin } from 'kysely'
 import pg from 'pg'
 import { env } from '../env.ts'
+import { countQuery } from '../timing.ts'
 import type { DB } from './types.ts'
 
 // bigint ids and counts fit comfortably in a JS number
@@ -14,6 +15,8 @@ export const createDb = (connectionString: string, max = 5): Db =>
       pool: new pg.Pool({ connectionString, max }),
     }),
     plugins: [new WithSchemaPlugin('app')],
+    // Adds each query's time to its request's Server-Timing
+    log: (event) => countQuery(event.queryDurationMillis),
   })
 
 let instance: Db | undefined

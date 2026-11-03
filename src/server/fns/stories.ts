@@ -36,13 +36,16 @@ const viewerOf = (user: { id: number; name: string }) => ({
 export const getStoryPage = createServerFn({ method: 'GET' })
   .validator(z.object({ story, search: storySearchSchema }))
   .handler(async ({ data }) => {
-    const user = await currentUser()
-    const viewer = user ? viewerOf(user) : null
     const database = db()
-    const resolved = await resolveStory(database, data.story)
+    // Who is reading, alongside which story, rather than one after the other
+    const [user, resolved] = await Promise.all([
+      currentUser(),
+      resolveStory(database, data.story),
+    ])
     if (!resolved) {
       throw notFound()
     }
+    const viewer = user ? viewerOf(user) : null
     const { search } = data
     const leaf = last(resolved.sentenceIds)
     const [view, children, link] = await Promise.all([
