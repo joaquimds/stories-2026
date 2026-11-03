@@ -10,7 +10,6 @@
   --color-grey-dark: #666666;
   --color-grey-medium: #bfbfbf;
   --color-grey-light: #ebebeb;
-  --color-grey-tint: #f5f5f5;
   --color-red: #f00;
   --color-green: #080;
   --color-blue: #00f;
@@ -174,7 +173,7 @@ button {
 }
 
 .button {
-  background: var(--color-grey-tint);
+  background: var(--color-white);
   border: 1px solid var(--color-grey-dark);
   border-radius: 4px;
   text-align: center;
@@ -239,7 +238,7 @@ input,
 
 .pending-bar {
   animation: pending 1.5s ease-out infinite;
-  background: #29d;
+  background: var(--color-black);
   height: 2px;
   left: 0;
   position: fixed;

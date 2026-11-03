@@ -98,10 +98,6 @@ decided against.
 - **Review the copy for the narrator's voice**: go through all the site's
   text and put anything that can be in the narrator's parenthetical style
   (quiet asides, gentle links and small notes, as in CLAUDE.md) into it.
-- **Review the theme colours**, to keep the set minimal: `grey-tint` is used
-  once (the grey button), the loading bar uses a stray `#29d`, and
-  `grey-medium` is left only for the map's off-path lines and the stats
-  bars now that the fork icons use `grey-dark`.
 
 ## Not yet
 
