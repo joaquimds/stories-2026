@@ -85,6 +85,22 @@ decided against.
 - **Credit in the digest**: writers also hear when someone else favourites or
   titles a story that passes through their sentences.
 
+## To do
+
+Small things noted for later:
+
+- **Cards as whole links.** Cards with fragments on them (the story page's
+  continuations, the library and other lists) should be links as a whole,
+  not just their sentence: the text no longer underlines on hover, and the
+  card itself shows it is hovered or focused and can be clicked.
+- **More room for the fork icons.** Slightly more horizontal padding in the
+  story view, and the map view to match, so the fork icons aren't cramped.
+- **Darker light icons.** The fork icons, and any other very light icons, a
+  little darker so they're easy to see; and a review of the theme colours,
+  to keep the set minimal.
+- **Even spacing in the fork list.** Equal top and bottom margins on the
+  list, and no bottom margin on its last item.
+
 ## Not yet
 
 - **Moderation tools.** Reports are emailed and stored, but there's no way to
