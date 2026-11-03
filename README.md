@@ -139,6 +139,11 @@ Choices that aren't obvious from the code, mostly made while rebuilding the
   once `SITE_URL` is https) are set in `server.ts` on every response. There
   is no Content Security Policy yet: the app's hydration uses inline
   scripts.
+- **After a deploy**, a tab opened before it can ask for a page's code by
+  its old file name. The root error screen recognises that one error and
+  reloads the page instead, once per tab (sharing the router's own note);
+  any other error, or the same one again, shows "Something went wrong",
+  and every error is logged to the console.
 - **Forgotten passwords** always report success, so the form doesn't reveal
   which emails have accounts. Passwords need at least 8 characters.
 - **Favourites** are ordered by when they were liked; the like's path id is

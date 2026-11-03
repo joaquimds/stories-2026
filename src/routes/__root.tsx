@@ -3,11 +3,12 @@ import {
   Link,
   Outlet,
   Scripts,
+  type ErrorComponentProps,
   createRootRoute,
   useRouteContext,
   useRouterState,
 } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect } from 'react'
 import { Footer } from '../components/Footer.tsx'
 import { Navbar } from '../components/Navbar.tsx'
 import { PendingBar } from '../components/PendingBar.tsx'
@@ -49,7 +50,7 @@ export const Route = createRootRoute({
   },
   component: RootComponent,
   notFoundComponent: () => <Message>Not found</Message>,
-  errorComponent: () => <Message>Something went wrong</Message>,
+  errorComponent: ErrorScreen,
 })
 
 function RootComponent() {
@@ -81,6 +82,51 @@ function RootDocument({ children }: { children: ReactNode }) {
       </body>
     </html>
   )
+}
+
+// A page's code that failed to load, as browsers word it; the router's own
+// check (isModuleNotFoundError, not exported to apps) uses the same three
+const isMissingCode = (error: unknown): error is Error =>
+  error instanceof Error &&
+  [
+    'Failed to fetch dynamically imported module',
+    'error loading dynamically imported module',
+    'Importing a module script failed',
+  ].some((message) => error.message.startsWith(message))
+
+// The router's own note, in this tab, that it has reloaded for an error
+const reloadKey = (error: Error) => `tanstack_router_reload:${error.message}`
+
+// Whether to reload the page for this error: a tab opened before a deploy
+// asking for a page's code that is no longer there, which loading the page
+// afresh mends. Only once per tab, sharing the router's note so the two
+// never both reload; after that, or without storage, the error shows.
+const shouldReload = (error: unknown): error is Error => {
+  if (typeof window === 'undefined' || !isMissingCode(error)) {
+    return false
+  }
+  try {
+    return !window.sessionStorage.getItem(reloadKey(error))
+  } catch {
+    return false
+  }
+}
+
+// Set once a reload is under way, so nothing shows while the page goes
+let reloading = false
+
+// Shows what went wrong, except for the moment a reload mends it
+function ErrorScreen({ error }: ErrorComponentProps) {
+  const reload = reloading || shouldReload(error)
+  useEffect(() => {
+    console.error(error)
+    if (!reloading && shouldReload(error)) {
+      reloading = true
+      window.sessionStorage.setItem(reloadKey(error), '1')
+      window.location.reload()
+    }
+  }, [error])
+  return reload ? null : <Message>Something went wrong</Message>
 }
 
 function Message({ children }: { children: ReactNode }) {
