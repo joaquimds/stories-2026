@@ -776,20 +776,16 @@ export const StoryMap = ({
         >
           −
         </button>
-        <span className="aside">
-          (
-          <button
-            type="button"
-            className="link"
-            onClick={() => {
-              cancelAnimationFrame(glide.current)
-              setChosen(null)
-            }}
-          >
-            reset
-          </button>
-          )
-        </span>
+        <button
+          type="button"
+          className="link"
+          onClick={() => {
+            cancelAnimationFrame(glide.current)
+            setChosen(null)
+          }}
+        >
+          reset
+        </button>
       </div>
       <svg
         ref={svg}
