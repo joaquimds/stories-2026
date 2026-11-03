@@ -197,32 +197,53 @@ test('writes, links, unlinks and deletes on the map', async ({ page }) => {
   await page.getByRole('link', { name: '(map)' }).click()
   await expect(page).toHaveURL(/\/map\//)
   const map = page.getByRole('img', { name: "Map of the story's branches" })
-  const popover = page.getByRole('tooltip')
-  // Actions are where you are, in its dot's popover
-  const actOn = async (sentence: string, action: string) => {
-    await map.getByRole('link', { name: sentence, exact: true }).hover()
-    await popover.getByRole('button', { name: action, exact: true }).click()
-  }
+  const plus = map.getByRole('button', { name: 'Write or link from here' })
+  const box = await map.boundingBox()
+  if (!box) throw new Error('no map')
+  // An empty spot, away from the dots in the middle
+  const empty = { x: box.x + 40, y: box.y + box.height - 60 }
+  await map.hover()
 
-  // Write on from here: a new dot, and the map moves to it
-  await actOn(first, 'write')
-  await page.getByRole('textbox', { name: 'Write' }).fill(second)
-  await page.getByRole('button', { name: 'Submit' }).click()
+  // The + brings out an arrow; Escape and a right click put it away
+  await plus.click()
+  await expect(plus).toHaveAttribute('aria-pressed', 'true')
+  await page.keyboard.press('Escape')
+  await expect(plus).toHaveAttribute('aria-pressed', 'false')
+  await plus.click()
+  await page.mouse.click(empty.x, empty.y, { button: 'right' })
+  await expect(plus).toHaveAttribute('aria-pressed', 'false')
+
+  // The arrow landing in empty space opens a card to write in, which its ×
+  // closes and opens again with the draft kept
+  await plus.click()
+  await page.mouse.click(empty.x, empty.y)
+  const card = page.getByRole('form', { name: 'Write a new fragment' })
+  await card.getByRole('textbox', { name: 'Write' }).fill(second)
+  await card.getByRole('button', { name: 'Close' }).click()
+  await expect(card).toHaveCount(0)
+  await plus.click()
+  await page.mouse.click(empty.x, empty.y)
+  await expect(card.getByRole('textbox', { name: 'Write' })).toHaveValue(second)
+  await card.getByRole('button', { name: 'Submit' }).click()
   await expect(map.getByRole('link', { name: second })).toHaveCount(1)
   const written = page.url()
 
-  // Link back to the beginning: choose link, then the dot to link to
-  await actOn(second, 'link')
+  // The arrow landing on a dot links to it
+  await map.hover()
+  await plus.click()
   await map.getByRole('link', { name: `Link to ${first}` }).click()
   await expect(page).not.toHaveURL(written)
   await expect(map.getByRole('link', { name: first })).toHaveCount(1)
 
-  // Unlink it again, back to where it was made
-  await actOn(first, 'unlink')
+  // Unlink it again, from where you are, back to where it was made
+  const popover = page.getByRole('tooltip')
+  await map.getByRole('link', { name: first, exact: true }).hover()
+  await popover.getByRole('button', { name: 'unlink' }).click()
   await expect(page).toHaveURL(written)
 
   // Delete what was written, and its dot goes
-  await actOn(second, 'delete')
+  await map.getByRole('link', { name: second, exact: true }).hover()
+  await popover.getByRole('button', { name: 'delete' }).click()
   await expect(map.getByRole('link', { name: second })).toHaveCount(0)
   await expect(map.getByRole('link', { name: first })).toHaveCount(1)
 })

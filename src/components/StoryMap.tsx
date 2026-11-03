@@ -21,7 +21,7 @@ import {
   removeFromGraph,
 } from '../lib/map-graph.ts'
 import { ROOT_NAME } from '../lib/site.ts'
-import { ROOT_ID, storyParam } from '../domain/thread.ts'
+import { ROOT_ID, parseThread, storyParam } from '../domain/thread.ts'
 import { walkTargets } from '../domain/walk.ts'
 import { last, present } from '../domain/present.ts'
 import styles from './StoryMap.module.css'
@@ -34,6 +34,8 @@ const FRAME_MARGIN = 60
 // Until the map is measured in the browser
 const DEFAULT_SIZE = { width: 700, height: 500 }
 const GLIDE_MS = 450
+// About how tall the write card is, to keep it inside the map
+const WRITE_CARD_HEIGHT = 170
 
 // The map point at the centre of the view, and screen pixels per map unit
 type Camera = { x: number; y: number; scale: number }
@@ -213,7 +215,13 @@ const placeNew = (graph: Graph, placed: Map<number, Point>, anchor: number) => {
 // and drawn gently towards the middle. New sentences start next to their
 // neighbours; those already placed stay where they are, so the map grows
 // rather than changing shape.
-const useForceLayout = (graph: Graph, anchor: number) => {
+const useForceLayout = (
+  graph: Graph,
+  anchor: number,
+  // Where particular new sentences should start, such as where you chose
+  // to write one
+  hints: { current: Map<number, Point> },
+) => {
   const [positions, setPositions] = useState(() =>
     placeNew(graph, new Map(), anchor),
   )
@@ -223,7 +231,13 @@ const useForceLayout = (graph: Graph, anchor: number) => {
   })
   useEffect(() => {
     const { graph, anchor, positions: placed } = latest.current
-    const start = placeNew(graph, placed, anchor)
+    const seeded = new Map(placed)
+    for (const [id, at] of hints.current) {
+      if (!placed.has(id) && graph.fragments.has(id)) {
+        seeded.set(id, at)
+      }
+    }
+    const start = placeNew(graph, seeded, anchor)
     const settled = [...graph.fragments.keys()].every((id) => placed.has(id))
     const bodies: Body[] = [...graph.fragments.keys()].map((id) => ({
       id,
@@ -263,7 +277,7 @@ const useForceLayout = (graph: Graph, anchor: number) => {
     return () => {
       simulation.stop()
     }
-  }, [graph])
+  }, [graph, hints])
   return positions
 }
 
@@ -370,7 +384,8 @@ export const StoryMap = ({
     path.slice(1).map((id, i) => linkKey(present(path[i]), id)),
   )
 
-  const positions = useForceLayout(graph, present(path[0]))
+  const hints = useRef(new Map<number, Point>())
+  const positions = useForceLayout(graph, present(path[0]), hints)
   const shownAfter = useMemo(() => {
     const counts = new Map<number, number>()
     for (const { from } of graph.links.values()) {
@@ -405,15 +420,31 @@ export const StoryMap = ({
     thread: here.thread,
     user,
     back,
-    onWritten: goTo,
+    // The new sentence starts where you chose to write it
+    onWritten: (thread) => {
+      const leaf = parseThread(thread)?.leaf
+      if (drop && leaf !== undefined) {
+        hints.current.set(leaf, drop)
+      }
+      return goTo(thread)
+    },
     onLinked: goTo,
   })
-  const [mode, setMode] = useState<'write' | 'link' | null>(null)
+  // Writing and linking start from the + beside where you are: it brings
+  // out an arrow ('aim'), which links to a dot it lands on, or opens a
+  // card to write in ('write') where it lands in empty space
+  const [mode, setMode] = useState<'aim' | 'write' | null>(null)
   // Moving along the map ends whatever you were doing
   const [modeAt, setModeAt] = useState(current)
   if (modeAt !== current) {
     setModeAt(current)
     setMode(null)
+  }
+  // Where the write card was opened, which is where the new dot starts
+  const [drop, setDrop] = useState<Point | null>(null)
+  const openWrite = (at: Point) => {
+    setDrop(at)
+    setMode('write')
   }
   const root = present(path[0])
   const continuing = new Set(
@@ -421,10 +452,10 @@ export const StoryMap = ({
       .filter((l) => l.from === current)
       .map((l) => l.to),
   )
-  // What can be linked to from where you are: not the beginning, not where
-  // you are, and not what already follows
+  // What can be linked to from where you are, once logged in: not the
+  // beginning, not where you are, and not what already follows
   const linkable = (id: number) =>
-    id !== ROOT_ID && id !== current && !continuing.has(id)
+    Boolean(user) && id !== ROOT_ID && id !== current && !continuing.has(id)
   const linkTo = (id: number) => {
     setMode(null)
     void writing.linkTo(id)
@@ -454,8 +485,7 @@ export const StoryMap = ({
         await goTo(result.parentThread)
       },
     )
-  // Where the pointer is while choosing what to link to
-  const [aim, setAim] = useState<Point | null>(null)
+  // Escape puts the arrow away, or closes the write card, keeping its draft
   useEffect(() => {
     if (!mode) {
       return
@@ -468,6 +498,21 @@ export const StoryMap = ({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [mode])
+
+  // Where the pointer is on the map, and whether it is over it; the + eases
+  // round where you are to face it
+  const [pointer, setPointer] = useState<Point | null>(null)
+  const [overMap, setOverMap] = useState(false)
+  const [touched, setTouched] = useState(false)
+  const [plusFocused, setPlusFocused] = useState(false)
+  const [plusAngle, setPlusAngle] = useState<number | null>(null)
+  // Screens without hover show the + from the start
+  useEffect(() => {
+    if (window.matchMedia('(hover: none)').matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only, after hydration
+      setTouched(true)
+    }
+  }, [])
 
   const [size, setSize] = useState(DEFAULT_SIZE)
   // Follows the layout as it settles, until the reader moves around
@@ -594,16 +639,23 @@ export const StoryMap = ({
       fragment.continuations === 0 ? styles['dot-end'] : '',
     ].join(' ')
 
-  // Where something about a dot sits: above it, or below near the top,
-  // inside the map
-  const anchored = (at: Point) => {
+  // Where something about a point sits: above it, or below near the top
+  // (or wherever `side` says), inside the map
+  const anchored = (
+    at: Point,
+    side?: 'above' | 'below',
+    // Kept this far from the map's edges, for something this tall
+    height = 0,
+  ) => {
     const x = (at.x - camera.x) * camera.scale + size.width / 2
     const y = (at.y - camera.y) * camera.scale + size.height / 2
     const half = Math.min(POPOVER_WIDTH, size.width - 16) / 2
-    const above = y > 160
+    const above = side ? side === 'above' : y > 160
     return {
       left: Math.min(Math.max(x, half + 8), size.width - half - 8),
-      top: above ? y - 16 : y + 16,
+      top: above
+        ? Math.max(y - 16, height + 8)
+        : Math.min(y + 16, size.height - height - 8),
       width: half * 2,
       transform: above ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
     }
@@ -623,24 +675,83 @@ export const StoryMap = ({
     }
   })()
 
-  // The write box sits by where you are, or along the foot of a narrow map
-  const writeBox = (() => {
-    const at = positions.get(current)
-    if (mode !== 'write' || !at) {
-      return null
-    }
-    return size.width < 500 ? { left: 8, right: 8, bottom: 52 } : anchored(at)
-  })()
+  const currentAt = positions.get(current)
+  // The write card sits where you chose to write, or along the foot of a
+  // narrow map
+  const writeCard =
+    mode === 'write' && drop
+      ? size.width < 500
+        ? { left: 8, right: 8, bottom: 52 }
+        : // On the far side from where you are, so the arrow stays in view
+          anchored(
+            drop,
+            drop.y < (currentAt?.y ?? 0) ? 'above' : 'below',
+            WRITE_CARD_HEIGHT,
+          )
+      : null
 
-  // Where the aiming line ends: on a dot that can be linked, or the pointer
+  // Where the arrow ends: on a dot that can be linked, or at the pointer;
+  // while writing, where the new sentence will go
   const aimAt = (() => {
-    if (mode !== 'link') {
+    if (mode === 'write') {
+      return drop
+    }
+    if (mode !== 'aim') {
       return null
     }
     const dot =
       hovered !== null && linkable(hovered) ? positions.get(hovered) : null
-    return dot ?? aim
+    return dot ?? pointer
   })()
+
+  // The + faces the pointer, or, on a touch screen, the emptiest side of
+  // where you are: away from what it links with
+  const plusFacing = (() => {
+    if (plusAngle !== null && !touched) {
+      return plusAngle
+    }
+    if (!currentAt) {
+      return 0
+    }
+    let [x, y] = [0, 0]
+    for (const { from, to } of graph.links.values()) {
+      const other = from === current ? to : to === current ? from : undefined
+      const at = other === undefined ? undefined : positions.get(other)
+      if (at && other !== current) {
+        const d = Math.hypot(at.x - currentAt.x, at.y - currentAt.y) || 1
+        x += (at.x - currentAt.x) / d
+        y += (at.y - currentAt.y) / d
+      }
+    }
+    return x || y ? (Math.atan2(-y, -x) * 180) / Math.PI : -45
+  })()
+  const showPlus =
+    Boolean(currentAt) &&
+    mode !== 'write' &&
+    (overMap || touched || plusFocused || mode === 'aim')
+  // Turns the + to face a point, the short way round
+  const facePlus = (at: Point) => {
+    if (!currentAt) {
+      return
+    }
+    const target =
+      (Math.atan2(at.y - currentAt.y, at.x - currentAt.x) * 180) / Math.PI
+    setPlusAngle((previous) => {
+      if (previous === null) {
+        return target
+      }
+      const turn = ((((target - previous) % 360) + 540) % 360) - 180
+      return previous + turn
+    })
+  }
+  // Where the + sits, for writing from it by keyboard
+  const plusPoint = (distance: number): Point | null =>
+    currentAt
+      ? {
+          x: currentAt.x + distance * Math.cos((plusFacing * Math.PI) / 180),
+          y: currentAt.y + distance * Math.sin((plusFacing * Math.PI) / 180),
+        }
+      : null
 
   const px = 1 / camera.scale
   const fragments = [...graph.fragments.values()]
@@ -682,13 +793,18 @@ export const StoryMap = ({
         viewBox={viewBox}
         role="img"
         aria-label="Map of the story's branches"
+        onPointerEnter={(event) => {
+          if (event.pointerType === 'mouse') {
+            setOverMap(true)
+          }
+        }}
+        onPointerLeave={() => setOverMap(false)}
         onPointerDown={(event) => {
+          if (event.pointerType === 'touch') {
+            setTouched(true)
+          }
           if (event.target === event.currentTarget) {
             setHovered(null)
-            // Tapping the map itself stops choosing what to link to
-            if (mode === 'link') {
-              setMode(null)
-            }
           }
           cancelAnimationFrame(glide.current)
           drag.current = {
@@ -699,15 +815,19 @@ export const StoryMap = ({
           }
         }}
         onPointerMove={(event) => {
-          if (mode === 'link') {
-            setAim(
-              pointAt(
-                event.currentTarget,
-                event.clientX,
-                event.clientY,
-                camera,
-              ),
+          if (event.pointerType === 'mouse') {
+            // Also after something over the map, like the write card, goes
+            setOverMap(true)
+            const at = pointAt(
+              event.currentTarget,
+              event.clientX,
+              event.clientY,
+              camera,
             )
+            setPointer(at)
+            if (mode !== 'aim') {
+              facePlus(at)
+            }
           }
           const start = drag.current
           if (!start) {
@@ -740,6 +860,30 @@ export const StoryMap = ({
             event.stopPropagation()
           }
         }}
+        onClick={(event) => {
+          // The arrow landing in empty space: write a new sentence there
+          if (
+            mode === 'aim' &&
+            event.target === event.currentTarget &&
+            !drag.current?.moved
+          ) {
+            openWrite(
+              pointAt(
+                event.currentTarget,
+                event.clientX,
+                event.clientY,
+                camera,
+              ),
+            )
+          }
+        }}
+        onContextMenu={(event) => {
+          // A right click puts the arrow away
+          if (mode === 'aim') {
+            event.preventDefault()
+            setMode(null)
+          }
+        }}
       >
         {[...graph.links.values()].map(({ from, to }) => {
           const a = positions.get(from)
@@ -770,14 +914,27 @@ export const StoryMap = ({
             </g>
           )
         })}
-        {aimAt && positions.get(current) ? (
-          <line
-            x1={positions.get(current)?.x}
-            y1={positions.get(current)?.y}
-            x2={aimAt.x}
-            y2={aimAt.y}
-            className={styles.aim}
-          />
+        {aimAt && currentAt ? (
+          <g className={styles.aim}>
+            {(() => {
+              const onDot =
+                mode === 'aim' && hovered !== null && linkable(hovered)
+              const shape = linkShape(
+                currentAt,
+                aimAt,
+                13 * px,
+                (onDot ? 8 : 0) * px,
+                8 * px,
+                false,
+              )
+              return (
+                <>
+                  <path d={shape.line} />
+                  <path d={shape.head} className={styles.head} />
+                </>
+              )
+            })()}
+          </g>
         ) : null}
         {fragments.map((fragment) => {
           const at = positions.get(fragment.id)
@@ -790,7 +947,9 @@ export const StoryMap = ({
               key={id}
               transform={`translate(${at.x} ${at.y})`}
               className={
-                mode === 'link' && !linkable(id) ? styles.faded : undefined
+                mode === 'aim' && !linkable(id) && id !== current
+                  ? styles.faded
+                  : undefined
               }
               onPointerEnter={(event) => {
                 // Touch has no hover: a first tap shows the sentence instead
@@ -835,8 +994,9 @@ export const StoryMap = ({
               <Link
                 to="/map/$story"
                 params={{ story: storyParam(target(fragment)) }}
+                tabIndex={mode === 'aim' && !linkable(id) ? -1 : undefined}
                 aria-label={
-                  mode === 'link' && linkable(id)
+                  mode === 'aim' && linkable(id)
                     ? `Link to ${sentence(fragment)}`
                     : sentence(fragment)
                 }
@@ -848,7 +1008,7 @@ export const StoryMap = ({
                   if (pointerType.current === 'touch' && hovered !== id) {
                     event.preventDefault()
                     show(id)
-                  } else if (mode === 'link') {
+                  } else if (mode === 'aim') {
                     // Choosing what to link to rather than moving
                     event.preventDefault()
                     if (linkable(id)) {
@@ -863,6 +1023,48 @@ export const StoryMap = ({
             </g>
           )
         })}
+        {showPlus && currentAt ? (
+          <g transform={`translate(${currentAt.x} ${currentAt.y})`}>
+            <g
+              className={styles['plus-turn']}
+              style={{ transform: `rotate(${plusFacing}deg)` }}
+            >
+              <g
+                transform={`translate(${24 * px} 0)`}
+                className={styles.plus}
+                role="button"
+                tabIndex={0}
+                aria-label="Write or link from here"
+                aria-pressed={mode === 'aim'}
+                onPointerDown={(event) => event.stopPropagation()}
+                onFocus={() => setPlusFocused(true)}
+                onBlur={() => setPlusFocused(false)}
+                onClick={() => setMode(mode === 'aim' ? null : 'aim')}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') {
+                    return
+                  }
+                  event.preventDefault()
+                  // Enter brings out the arrow; Enter again writes, from
+                  // just beyond the +
+                  if (mode === 'aim') {
+                    const at = plusPoint(60 * px)
+                    if (at) {
+                      openWrite(at)
+                    }
+                  } else {
+                    setMode('aim')
+                  }
+                }}
+              >
+                <circle r={9 * px} />
+                <path
+                  d={`M ${-4 * px} 0 H ${4 * px} M 0 ${-4 * px} V ${4 * px}`}
+                />
+              </g>
+            </g>
+          </g>
+        ) : null}
       </svg>
       {popover ? (
         <div
@@ -884,7 +1086,7 @@ export const StoryMap = ({
           {popover.more > 0 ? (
             <span className={styles.notes}>+{popover.more}</span>
           ) : null}
-          {mode === 'link' && linkable(popover.fragment.id) ? (
+          {mode === 'aim' && linkable(popover.fragment.id) ? (
             <div className={styles.actions}>
               <button
                 type="button"
@@ -896,27 +1098,10 @@ export const StoryMap = ({
               </button>
             </div>
           ) : null}
-          {popover.fragment.id === current && mode !== 'link' ? (
+          {popover.fragment.id === current &&
+          mode !== 'aim' &&
+          (here.may.delete || here.may.unlink) ? (
             <div className={styles.actions}>
-              <button
-                type="button"
-                className="link"
-                disabled={writing.busy}
-                onClick={() => setMode(mode === 'write' ? null : 'write')}
-              >
-                write
-              </button>
-              <button
-                type="button"
-                className="link"
-                disabled={writing.busy || !user}
-                onClick={() => {
-                  setHovered(null)
-                  setMode('link')
-                }}
-              >
-                link
-              </button>
               {here.may.delete ? (
                 <button
                   type="button"
@@ -941,15 +1126,24 @@ export const StoryMap = ({
           ) : null}
         </div>
       ) : null}
-      {writeBox ? (
+      {writeCard ? (
         <form
           className={styles.writer}
-          style={writeBox}
+          style={writeCard}
+          aria-label="Write a new fragment"
           onSubmit={(event) => {
             event.preventDefault()
             void writing.submit()
           }}
         >
+          <button
+            type="button"
+            className={`link ${styles.close}`}
+            aria-label="Close"
+            onClick={() => setMode(null)}
+          >
+            ×
+          </button>
           <textarea
             aria-label="Write"
             value={writing.content}
@@ -959,29 +1153,20 @@ export const StoryMap = ({
             // Opened on purpose, to write in
             autoFocus
           />
-          <div className={styles['writer-actions']}>
+          {user ? (
             <button
-              type="button"
-              className="link"
-              onClick={() => setMode(null)}
+              className="button"
+              disabled={writing.busy || !writing.content.trim()}
             >
-              cancel
+              Submit
             </button>
-            {user ? (
-              <button
-                className="button"
-                disabled={writing.busy || !writing.content.trim()}
-              >
-                Submit
-              </button>
-            ) : (
-              <button className="button">
-                {writing.content.trim()
-                  ? 'Log in to publish'
-                  : 'Log in to contribute'}
-              </button>
-            )}
-          </div>
+          ) : (
+            <button className="button">
+              {writing.content.trim()
+                ? 'Log in to publish'
+                : 'Log in to contribute'}
+            </button>
+          )}
         </form>
       ) : null}
       {writing.error ? (

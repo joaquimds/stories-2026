@@ -70,10 +70,12 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
     question: 'Can I write or link on the map?',
     answer: (
       <p>
-        Yes, from where you are: point at (or tap) the ringed point to write on
-        from it, link it to another point on the map, or delete or unlink it as
-        you could on the story. To write a variation on the map, step back one
-        point, write your version, then link it on to where the story went next.
+        Yes, from where you are. Click the {'"+"'} beside the ringed point (or
+        tap it) to draw an arrow: land it on another point to link to it, or in
+        an empty space to write something new there. Escape or a right click
+        puts the arrow away. The ringed point can also be deleted or unlinked,
+        as on the story. To write a variation on the map, step back one point,
+        write your version, then link it on to where the story went next.
       </p>
     ),
   },

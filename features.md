@@ -48,16 +48,20 @@ decided against.
   thread can't be written) opens the story it was written in. A popover's
   text opens the same story its dot does. The beginning (the root) is green
   and endings are red, outlined off the story. Pointing at a dot (or a first
-  tap, or focus) shows its sentence in a popover. Where you are (the
-  ringed dot), its popover also offers write, link, and delete or unlink by
-  the story page's own rules, through the same server functions and the
-  same writing code (`useWriting`, `useAction`): writing opens a box by the
-  dot (along the foot on narrow screens), with drafts shared with the story
-  page; linking fades what can't be linked (the beginning, where you are,
-  what already follows), runs a dashed line from where you are, and links
-  to any dot clicked (or tapped twice, or chosen with Enter). Each moves
-  along the map; after a delete or unlink, what was removed, and anything
-  no longer reachable from the beginning, leaves it. A variation on the map
+  tap, or focus) shows its sentence in a popover. Writing and linking start
+  from a + beside where you are, shown while the pointer is over the map (or
+  always, on screens without hover), which eases round to face the pointer.
+  Clicking it (or Enter) brings out a dashed arrow: landing it on a dot
+  links to it (what can't be linked fades: the beginning, what already
+  follows, everything when logged out; a touch shows "link here" first),
+  and landing it in empty space opens a card to write in there, closed by
+  its × or Escape with the draft kept; the new dot starts where the arrow
+  landed. Escape or a right click puts the arrow away, and a drag still
+  pans. The ringed dot's popover offers delete or unlink by the story page's
+  own rules. All of it goes through the story page's server functions and
+  writing code (`useWriting`, `useAction`); each moves along the map, and
+  after a delete or unlink, what was removed, and anything no longer
+  reachable from the beginning, leaves it. A variation on the map
   is a step back, a write and a link. Favourites, titles and reports stay on
   the story page.
   "+N" counts continuations not loaded yet. Laid out live by d3-force:
