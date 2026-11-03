@@ -37,7 +37,9 @@ decided against.
   (the story's previous sentence first, then by when they were linked).
   Clicking a dot (or a second tap; Enter from the keyboard) moves there,
   adding to the map without rebuilding it, and the camera glides there. A
-  dot on the story goes back to that point on it; any other goes on along
+  dot that follows where you are is the next step, even round a loop to a
+  sentence the story has already been through; any other dot on the story
+  goes back to that point on it; any other goes on along
   the shortest route loaded from the latest point on the story that has
   one, so the story so far is kept (`src/domain/walk.ts`); only a dot with
   no route falls back to the story it was written in. A popover's text

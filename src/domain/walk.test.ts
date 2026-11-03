@@ -35,10 +35,18 @@ describe('walkTargets', () => {
 
   it('goes back along the story to a sentence on it', () => {
     expect(targets.get(2)).toBe('/s/2')
-    // Even where a loop also leads there
-    expect(targets.get(1)).toBe('/s/1')
-    // Titled stories keep their slugs
+    // Where you are stays put, keeping a titled story's slug
     expect(targets.get(3)).toBe('/s/T')
+  })
+
+  it('takes one more step round a loop rather than going back', () => {
+    // A follows C as well as starting the story: from C, it is the next step
+    expect(targets.get(1)).toBe('/s/1.1-3')
+  })
+
+  it('goes back to an earlier sentence a loop reaches only further on', () => {
+    // B is two steps on round the loop, so it is the story's own B
+    expect(targets.get(2)).toBe('/s/2')
   })
 
   it('goes on from where you are', () => {
