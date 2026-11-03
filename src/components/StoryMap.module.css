@@ -220,9 +220,6 @@
 
   circle {
     fill: var(--color-white);
-    stroke: var(--color-black);
-    stroke-width: 1.5;
-    vector-effect: non-scaling-stroke;
   }
 
   path {
