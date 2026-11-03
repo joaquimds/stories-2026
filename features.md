@@ -48,7 +48,18 @@ decided against.
   thread can't be written) opens the story it was written in. A popover's
   text opens the same story its dot does. The beginning (the root) is green
   and endings are red, outlined off the story. Pointing at a dot (or a first
-  tap, or focus) shows its sentence in a popover.
+  tap, or focus) shows its sentence in a popover. Where you are (the
+  ringed dot), its popover also offers write, link, and delete or unlink by
+  the story page's own rules, through the same server functions and the
+  same writing code (`useWriting`, `useAction`): writing opens a box by the
+  dot (along the foot on narrow screens), with drafts shared with the story
+  page; linking fades what can't be linked (the beginning, where you are,
+  what already follows), runs a dashed line from where you are, and links
+  to any dot clicked (or tapped twice, or chosen with Enter). Each moves
+  along the map; after a delete or unlink, what was removed, and anything
+  no longer reachable from the beginning, leaves it. A variation on the map
+  is a step back, a write and a link. Favourites, titles and reports stay on
+  the story page.
   "+N" counts continuations not loaded yet. Laid out live by d3-force:
   springs along links, dots pushed apart, a gentle pull to the middle;
   new dots start beside their neighbours and placed ones stay put. Drag to

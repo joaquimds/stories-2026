@@ -187,3 +187,42 @@ test('links an existing sentence as a new beginning', async ({ page }) => {
   await expect(page).toHaveURL('/')
   await expect(page.locator('main ul li').getByText(target)).toHaveCount(0)
 })
+
+test('writes, links, unlinks and deletes on the map', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const first = unique('A map beginning')
+  const second = unique('Written on the map')
+  await page.goto('/')
+  await writeSentence(page, first)
+  await page.getByRole('link', { name: '(map)' }).click()
+  await expect(page).toHaveURL(/\/map\//)
+  const map = page.getByRole('img', { name: "Map of the story's branches" })
+  const popover = page.getByRole('tooltip')
+  // Actions are where you are, in its dot's popover
+  const actOn = async (sentence: string, action: string) => {
+    await map.getByRole('link', { name: sentence, exact: true }).hover()
+    await popover.getByRole('button', { name: action, exact: true }).click()
+  }
+
+  // Write on from here: a new dot, and the map moves to it
+  await actOn(first, 'write')
+  await page.getByRole('textbox', { name: 'Write' }).fill(second)
+  await page.getByRole('button', { name: 'Submit' }).click()
+  await expect(map.getByRole('link', { name: second })).toHaveCount(1)
+  const written = page.url()
+
+  // Link back to the beginning: choose link, then the dot to link to
+  await actOn(second, 'link')
+  await map.getByRole('link', { name: `Link to ${first}` }).click()
+  await expect(page).not.toHaveURL(written)
+  await expect(map.getByRole('link', { name: first })).toHaveCount(1)
+
+  // Unlink it again, back to where it was made
+  await actOn(first, 'unlink')
+  await expect(page).toHaveURL(written)
+
+  // Delete what was written, and its dot goes
+  await actOn(second, 'delete')
+  await expect(map.getByRole('link', { name: second })).toHaveCount(0)
+  await expect(map.getByRole('link', { name: first })).toHaveCount(1)
+})

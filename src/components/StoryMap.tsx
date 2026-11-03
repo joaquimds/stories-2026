@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import {
   type SimulationNodeDatum,
   forceCollide,
@@ -10,6 +10,16 @@ import {
 } from 'd3-force'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import type { MapFragment, MapGraph } from '../server/data/map.ts'
+import type { SessionUser } from '../server/auth/sessions.ts'
+import { remove, unlink } from '../server/fns/stories.ts'
+import { useWriting } from '../lib/use-writing.ts'
+import {
+  EMPTY,
+  type Graph,
+  linkKey,
+  merge,
+  removeFromGraph,
+} from '../lib/map-graph.ts'
 import { ROOT_NAME } from '../lib/site.ts'
 import { ROOT_ID, storyParam } from '../domain/thread.ts'
 import { walkTargets } from '../domain/walk.ts'
@@ -39,36 +49,6 @@ export type MapStory = {
   prefixes: string[]
   pathDefaults: Record<number, number | null>
 }
-
-// Everything loaded so far, one entry per sentence
-type Graph = {
-  fragments: Map<number, MapFragment>
-  links: Map<string, { from: number; to: number }>
-}
-
-const linkKey = (from: number, to: number) => `${from}-${to}`
-
-// Adds newly loaded sentences and links; the same graph back if nothing
-// is new, so the layout only restarts when there is something to place
-const merge = (graph: Graph, more: MapGraph): Graph => {
-  const fresh =
-    more.fragments.some((f) => !graph.fragments.has(f.id)) ||
-    more.links.some((l) => !graph.links.has(linkKey(l.from, l.to)))
-  if (!fresh) {
-    return graph
-  }
-  const fragments = new Map(graph.fragments)
-  for (const fragment of more.fragments) {
-    fragments.set(fragment.id, fragment)
-  }
-  const links = new Map(graph.links)
-  for (const link of more.links) {
-    links.set(linkKey(link.from, link.to), link)
-  }
-  return { fragments, links }
-}
-
-const EMPTY: Graph = { fragments: new Map(), links: new Map() }
 
 const clampScale = (scale: number) => Math.min(Math.max(scale, 0.1), 3)
 
@@ -355,11 +335,20 @@ const sentence = (fragment: MapFragment) =>
 export const StoryMap = ({
   graph: loaded,
   story,
+  here,
+  user,
   tab,
   title,
 }: {
   graph: MapGraph
   story: MapStory
+  // The story you are on, and what you may do there
+  here: {
+    thread: string
+    permalink: string
+    may: { delete: boolean; unlink: boolean }
+  }
+  user: SessionUser | null
   // Shown in the top left when the story has one
   title?: string | null
   // The tab at the foot of the map, back to the story
@@ -405,6 +394,80 @@ export const StoryMap = ({
   )
   const target = (fragment: MapFragment) =>
     targets.get(fragment.id) ?? fragment.origin
+
+  // Writing, linking, deleting and unlinking where you are, as on the
+  // story page and through the same code; each moves along the map
+  const navigate = useNavigate()
+  const goTo = (thread: string) =>
+    navigate({ to: '/map/$story', params: { story: thread } })
+  const back = `/map/${storyParam(here.permalink)}`
+  const writing = useWriting({
+    thread: here.thread,
+    user,
+    back,
+    onWritten: goTo,
+    onLinked: goTo,
+  })
+  const [mode, setMode] = useState<'write' | 'link' | null>(null)
+  // Moving along the map ends whatever you were doing
+  const [modeAt, setModeAt] = useState(current)
+  if (modeAt !== current) {
+    setModeAt(current)
+    setMode(null)
+  }
+  const root = present(path[0])
+  const continuing = new Set(
+    [...graph.links.values()]
+      .filter((l) => l.from === current)
+      .map((l) => l.to),
+  )
+  // What can be linked to from where you are: not the beginning, not where
+  // you are, and not what already follows
+  const linkable = (id: number) =>
+    id !== ROOT_ID && id !== current && !continuing.has(id)
+  const linkTo = (id: number) => {
+    setMode(null)
+    void writing.linkTo(id)
+  }
+  const onDelete = () =>
+    writing.act(
+      () => remove({ data: { story: here.thread } }),
+      async (result) => {
+        setGraph((g) => removeFromGraph(g, { fragments: [current] }, root))
+        await goTo(result.parentThread)
+      },
+    )
+  const onUnlink = () =>
+    writing.act(
+      () => unlink({ data: { story: here.thread } }),
+      async (result) => {
+        const previous = path.at(-2)
+        setGraph((g) =>
+          previous === undefined
+            ? g
+            : removeFromGraph(
+                g,
+                { links: [{ from: previous, to: current }] },
+                root,
+              ),
+        )
+        await goTo(result.parentThread)
+      },
+    )
+  // Where the pointer is while choosing what to link to
+  const [aim, setAim] = useState<Point | null>(null)
+  useEffect(() => {
+    if (!mode) {
+      return
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMode(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mode])
 
   const [size, setSize] = useState(DEFAULT_SIZE)
   // Follows the layout as it settles, until the reader moves around
@@ -531,27 +594,52 @@ export const StoryMap = ({
       fragment.continuations === 0 ? styles['dot-end'] : '',
     ].join(' ')
 
-  // The popover sits above its dot, or below near the top, inside the map
+  // Where something about a dot sits: above it, or below near the top,
+  // inside the map
+  const anchored = (at: Point) => {
+    const x = (at.x - camera.x) * camera.scale + size.width / 2
+    const y = (at.y - camera.y) * camera.scale + size.height / 2
+    const half = Math.min(POPOVER_WIDTH, size.width - 16) / 2
+    const above = y > 160
+    return {
+      left: Math.min(Math.max(x, half + 8), size.width - half - 8),
+      top: above ? y - 16 : y + 16,
+      width: half * 2,
+      transform: above ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+    }
+  }
+
   const popover = (() => {
     const fragment = hovered === null ? undefined : graph.fragments.get(hovered)
     const at = fragment ? positions.get(fragment.id) : undefined
     if (!fragment || !at) {
       return null
     }
-    const x = (at.x - camera.x) * camera.scale + size.width / 2
-    const y = (at.y - camera.y) * camera.scale + size.height / 2
-    const half = Math.min(POPOVER_WIDTH, size.width - 16) / 2
-    const above = y > 140
+    const { width, ...style } = anchored(at)
     return {
       fragment,
       more: fragment.continuations - (shownAfter.get(fragment.id) ?? 0),
-      style: {
-        left: Math.min(Math.max(x, half + 8), size.width - half - 8),
-        top: above ? y - 16 : y + 16,
-        maxWidth: half * 2,
-        transform: above ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
-      },
+      style: { ...style, maxWidth: width },
     }
+  })()
+
+  // The write box sits by where you are, or along the foot of a narrow map
+  const writeBox = (() => {
+    const at = positions.get(current)
+    if (mode !== 'write' || !at) {
+      return null
+    }
+    return size.width < 500 ? { left: 8, right: 8, bottom: 52 } : anchored(at)
+  })()
+
+  // Where the aiming line ends: on a dot that can be linked, or the pointer
+  const aimAt = (() => {
+    if (mode !== 'link') {
+      return null
+    }
+    const dot =
+      hovered !== null && linkable(hovered) ? positions.get(hovered) : null
+    return dot ?? aim
   })()
 
   const px = 1 / camera.scale
@@ -597,6 +685,10 @@ export const StoryMap = ({
         onPointerDown={(event) => {
           if (event.target === event.currentTarget) {
             setHovered(null)
+            // Tapping the map itself stops choosing what to link to
+            if (mode === 'link') {
+              setMode(null)
+            }
           }
           cancelAnimationFrame(glide.current)
           drag.current = {
@@ -607,6 +699,16 @@ export const StoryMap = ({
           }
         }}
         onPointerMove={(event) => {
+          if (mode === 'link') {
+            setAim(
+              pointAt(
+                event.currentTarget,
+                event.clientX,
+                event.clientY,
+                camera,
+              ),
+            )
+          }
           const start = drag.current
           if (!start) {
             return
@@ -668,6 +770,15 @@ export const StoryMap = ({
             </g>
           )
         })}
+        {aimAt && positions.get(current) ? (
+          <line
+            x1={positions.get(current)?.x}
+            y1={positions.get(current)?.y}
+            x2={aimAt.x}
+            y2={aimAt.y}
+            className={styles.aim}
+          />
+        ) : null}
         {fragments.map((fragment) => {
           const at = positions.get(fragment.id)
           if (!at) {
@@ -678,6 +789,9 @@ export const StoryMap = ({
             <g
               key={id}
               transform={`translate(${at.x} ${at.y})`}
+              className={
+                mode === 'link' && !linkable(id) ? styles.faded : undefined
+              }
               onPointerEnter={(event) => {
                 // Touch has no hover: a first tap shows the sentence instead
                 if (event.pointerType === 'mouse') {
@@ -721,7 +835,11 @@ export const StoryMap = ({
               <Link
                 to="/map/$story"
                 params={{ story: storyParam(target(fragment)) }}
-                aria-label={sentence(fragment)}
+                aria-label={
+                  mode === 'link' && linkable(id)
+                    ? `Link to ${sentence(fragment)}`
+                    : sentence(fragment)
+                }
                 className={styles.target}
                 onClick={(event) => {
                   pressing.current = false
@@ -730,6 +848,12 @@ export const StoryMap = ({
                   if (pointerType.current === 'touch' && hovered !== id) {
                     event.preventDefault()
                     show(id)
+                  } else if (mode === 'link') {
+                    // Choosing what to link to rather than moving
+                    event.preventDefault()
+                    if (linkable(id)) {
+                      linkTo(id)
+                    }
                   }
                 }}
               >
@@ -760,7 +884,108 @@ export const StoryMap = ({
           {popover.more > 0 ? (
             <span className={styles.notes}>+{popover.more}</span>
           ) : null}
+          {mode === 'link' && linkable(popover.fragment.id) ? (
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className="link"
+                disabled={writing.busy}
+                onClick={() => linkTo(popover.fragment.id)}
+              >
+                link here
+              </button>
+            </div>
+          ) : null}
+          {popover.fragment.id === current && mode !== 'link' ? (
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className="link"
+                disabled={writing.busy}
+                onClick={() => setMode(mode === 'write' ? null : 'write')}
+              >
+                write
+              </button>
+              <button
+                type="button"
+                className="link"
+                disabled={writing.busy || !user}
+                onClick={() => {
+                  setHovered(null)
+                  setMode('link')
+                }}
+              >
+                link
+              </button>
+              {here.may.delete ? (
+                <button
+                  type="button"
+                  className={`link ${styles.danger}`}
+                  disabled={writing.busy}
+                  onClick={() => void onDelete()}
+                >
+                  delete
+                </button>
+              ) : null}
+              {here.may.unlink ? (
+                <button
+                  type="button"
+                  className={`link ${styles.danger}`}
+                  disabled={writing.busy}
+                  onClick={() => void onUnlink()}
+                >
+                  unlink
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
+      ) : null}
+      {writeBox ? (
+        <form
+          className={styles.writer}
+          style={writeBox}
+          onSubmit={(event) => {
+            event.preventDefault()
+            void writing.submit()
+          }}
+        >
+          <textarea
+            aria-label="Write"
+            value={writing.content}
+            onChange={(event) => writing.onChange(event.target.value)}
+            placeholder="Write"
+            maxLength={280}
+            // Opened on purpose, to write in
+            autoFocus
+          />
+          <div className={styles['writer-actions']}>
+            <button
+              type="button"
+              className="link"
+              onClick={() => setMode(null)}
+            >
+              cancel
+            </button>
+            {user ? (
+              <button
+                className="button"
+                disabled={writing.busy || !writing.content.trim()}
+              >
+                Submit
+              </button>
+            ) : (
+              <button className="button">
+                {writing.content.trim()
+                  ? 'Log in to publish'
+                  : 'Log in to contribute'}
+              </button>
+            )}
+          </div>
+        </form>
+      ) : null}
+      {writing.error ? (
+        <small className={`error ${styles.error}`}>{writing.error}</small>
       ) : null}
       {tab}
     </div>

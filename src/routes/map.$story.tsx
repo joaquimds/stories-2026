@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useRouteContext } from '@tanstack/react-router'
 import { StoryMap } from '../components/StoryMap.tsx'
 import { SITE_TITLE } from '../lib/site.ts'
 import { getMap } from '../server/fns/stories.ts'
@@ -18,8 +18,9 @@ export const Route = createFileRoute('/map/$story')({
 })
 
 function MapPage() {
-  const { graph, path, prefixes, pathDefaults, permalink, title } =
+  const { graph, path, prefixes, pathDefaults, permalink, thread, title, may } =
     Route.useLoaderData()
+  const { user } = useRouteContext({ from: '__root__' })
   return (
     <div className={styles.page}>
       {/* One map that grows as you move around it, full height like the
@@ -27,6 +28,8 @@ function MapPage() {
       <StoryMap
         graph={graph}
         story={{ path, prefixes, pathDefaults }}
+        here={{ thread, permalink, may }}
+        user={user}
         title={title}
         tab={
           <Link to={permalink} className="book-tab">

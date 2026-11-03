@@ -137,14 +137,19 @@ export const getMap = createServerFn({ method: 'GET' })
   .validator(z.object({ story }))
   .handler(async ({ data }) => {
     const database = db()
-    const resolved = await resolveStory(database, data.story)
+    const [user, resolved] = await Promise.all([
+      currentUser(),
+      resolveStory(database, data.story),
+    ])
     if (!resolved) {
       throw notFound()
     }
+    const viewer = user ? viewerOf(user) : null
     const [graph, view] = await Promise.all([
       getStoryMap(database, resolved),
-      getStory(database, null, resolved),
+      getStory(database, viewer, resolved),
     ])
+    const leaf = view.lines.at(-1)
     // The story up to each of its sentences; the root's is the home page
     const prefixes = resolved.sentenceIds.map(() => '/')
     for (const line of view.lines) {
@@ -158,6 +163,12 @@ export const getMap = createServerFn({ method: 'GET' })
       // the addresses of walks onwards from it
       pathDefaults: Object.fromEntries(resolved.defaults),
       permalink: view.permalink,
+      thread: view.thread,
       title: view.title,
+      // What you may do where you are, by the story page's own rules
+      may: {
+        delete: view.isLeafAuthor && leaf !== undefined && !leaf.deleted,
+        unlink: view.canUnlink,
+      },
     }
   })

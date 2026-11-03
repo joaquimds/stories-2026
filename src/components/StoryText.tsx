@@ -11,7 +11,7 @@ import {
   unlink,
 } from '../server/fns/stories.ts'
 import { ROOT_THREAD } from '../domain/thread.ts'
-import type { Result } from '../domain/errors.ts'
+import { useAction } from '../lib/use-action.ts'
 import { Authors } from './Authors.tsx'
 import styles from './StoryText.module.css'
 import { last } from '../domain/present.ts'
@@ -29,8 +29,7 @@ export const StoryText = ({ story, user }: Props) => {
   const [titling, setTitling] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [reported, setReported] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { busy, error, setError, act } = useAction()
 
   // Resets local state when navigating to another story
   const [thread, setThread] = useState(story.thread)
@@ -47,27 +46,6 @@ export const StoryText = ({ story, user }: Props) => {
   const { lines } = story
   const leaf = last(lines)
   const lastIndex = lines.length - 1
-
-  // Runs an action, then shows its error or hands its result to `then`
-  const act = async <T extends object>(
-    action: () => Promise<Result<T>>,
-    then: (result: { ok: true } & T) => Promise<unknown> | void,
-  ) => {
-    setBusy(true)
-    setError(null)
-    try {
-      const result = await action()
-      if (result.ok) {
-        await then(result)
-      } else {
-        setError(result.error)
-      }
-    } catch {
-      setError('Something went wrong, please try again')
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const goTo = (thread: string) =>
     thread === ROOT_THREAD

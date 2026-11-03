@@ -142,3 +142,66 @@
   margin-left: var(--spacing-1);
   white-space: nowrap;
 }
+
+/* The ringed dot's actions, in its popover */
+.actions {
+  display: flex;
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-0);
+
+  button {
+    font-size: var(--font-size-1);
+  }
+}
+
+.danger {
+  color: var(--color-red);
+}
+
+/* While choosing what to link to: what can't be linked fades, and a dashed
+   line runs from where you are */
+.faded {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.aim {
+  stroke: var(--color-black);
+  stroke-dasharray: 4 4;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Writing on from where you are, in the site's card style */
+.writer {
+  background: var(--color-white);
+  border-radius: var(--spacing-1);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1);
+  position: absolute;
+  z-index: 2;
+
+  textarea {
+    font-size: var(--font-size-2);
+    height: 5rem;
+    padding: var(--spacing-0);
+    width: 100%;
+  }
+}
+
+.writer-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-2);
+  justify-content: flex-end;
+}
+
+.error {
+  left: 50%;
+  position: absolute;
+  top: var(--spacing-1);
+  transform: translateX(-50%);
+}
