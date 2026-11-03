@@ -50,7 +50,7 @@ decided against.
   and endings are red, outlined off the story. Pointing at a dot (or a first
   tap, or focus) shows its sentence in a popover. Writing and linking start
   from a + beside where you are, shown while the pointer is over the map (or
-  always, on screens without hover), which eases round to face the pointer.
+  always, on screens without hover), which turns to face the pointer.
   Clicking it (or Enter) brings out a dashed arrow: landing it on a dot
   links to it (what can't be linked fades: the beginning, what already
   follows, everything when logged out; a touch shows "link here" first),

@@ -499,7 +499,7 @@ export const StoryMap = ({
     return () => window.removeEventListener('keydown', onKey)
   }, [mode])
 
-  // Where the pointer is on the map, and whether it is over it; the + eases
+  // Where the pointer is on the map, and whether it is over it; the + turns
   // round where you are to face it
   const [pointer, setPointer] = useState<Point | null>(null)
   const [overMap, setOverMap] = useState(false)
@@ -1025,10 +1025,7 @@ export const StoryMap = ({
         })}
         {showPlus && currentAt ? (
           <g transform={`translate(${currentAt.x} ${currentAt.y})`}>
-            <g
-              className={styles['plus-turn']}
-              style={{ transform: `rotate(${plusFacing}deg)` }}
-            >
+            <g transform={`rotate(${plusFacing})`}>
               <g
                 transform={`translate(${24 * px} 0)`}
                 className={styles.plus}
