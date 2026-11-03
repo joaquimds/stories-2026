@@ -13,8 +13,6 @@ import {
   writeChain,
 } from './helpers.ts'
 
-const limits = { trunk: 3, parents: 8 }
-
 // Lookups by content, for readable tests
 const view = (graph: MapGraph) => {
   const byContent = (content: string) =>
@@ -35,7 +33,7 @@ const view = (graph: MapGraph) => {
 
 describe('getStoryMap', () => {
   it(
-    'shows the end of the story and one step either way from where you are',
+    'shows the whole story and one step on from where you are',
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [, b, c, d] = await writeChain(trx, ana, null, 'A', 'B', 'C', 'D')
@@ -46,11 +44,13 @@ describe('getStoryMap', () => {
       await writeChain(trx, ana, d, 'E2')
       await writeChain(trx, ana, d, 'E3')
 
-      const graph = await getStoryMap(trx, await resolved(trx, d), limits)
+      const graph = await getStoryMap(trx, await resolved(trx, d))
       const { byContent, after } = view(graph)
 
-      // The trunk is the last three sentences: B, C, D
-      expect(byContent('A')).toBeUndefined()
+      // The whole story, from the beginning
+      expect(byContent('')).toMatchObject({ id: 0 })
+      expect(after('')).toEqual(['A'])
+      expect(after('A')).toEqual(['B'])
       expect(after('B')).toEqual(['C'])
       expect(byContent('C')?.origin).toBe(`/s/${c}`)
       expect(byContent('C2')).toBeUndefined()
@@ -83,7 +83,7 @@ describe('getStoryMap', () => {
       await setLike(trx, cat, { story: liked, liked: true })
       await writeChain(trx, bob, quiet, 'Continued')
 
-      const graph = await getStoryMap(trx, await resolved(trx, a), limits)
+      const graph = await getStoryMap(trx, await resolved(trx, a))
       // Liked by three people in all, Quiet by two, Old by one
       expect(view(graph).after('A')).toEqual(['Liked', 'Quiet', 'Old'])
       expect(view(graph).byContent('A')).toMatchObject({ continuations: 3 })
@@ -119,7 +119,7 @@ describe('getStoryMap', () => {
 
       const story = await resolved(trx, a)
       const page = await getChildren(trx, story, { order: 'popular' })
-      const graph = await getStoryMap(trx, story, limits)
+      const graph = await getStoryMap(trx, story)
       const onMap = view(graph).after('A')
       expect(onMap).toEqual(page.page.items.map((i) => i.content))
       expect(onMap).toEqual(['Popular here', 'Popular elsewhere', 'Unread'])
@@ -138,13 +138,9 @@ describe('getStoryMap', () => {
       const ana = await createUser(trx)
       const [a, , c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
       await linkSentence(trx, ana, { story: c, sentenceId: leafOf(a) })
-      const graph = await getStoryMap(trx, await resolved(trx, c), {
-        ...limits,
-        trunk: 4,
-      })
+      const graph = await getStoryMap(trx, await resolved(trx, c))
       expect(graph.fragments.filter((f) => f.content === 'A')).toHaveLength(1)
       expect(view(graph).after('C')).toEqual(['A'])
-      // The root is on the map when the story is short enough
       expect(graph.fragments[0]).toMatchObject({
         id: 0,
         content: '',
@@ -156,23 +152,16 @@ describe('getStoryMap', () => {
 
 describe('what leads in', () => {
   it(
-    'loads everything that leads into the current sentence, one level back',
+    'is not loaded: everything on the map can be walked to',
     rollback(async (trx) => {
       const ana = await createUser(trx)
       const [, , c] = await writeChain(trx, ana, null, 'A', 'B', 'C')
       const [z] = await writeChain(trx, ana, null, 'Z')
       await linkSentence(trx, ana, { story: z, sentenceId: leafOf(c) })
-      const graph = await getStoryMap(trx, await resolved(trx, c), {
-        ...limits,
-        trunk: 2,
-      })
-      const { before, byContent } = view(graph)
-      // C is reached from B, and also linked from Z, the story's own
-      // previous sentence first
-      expect(before('C')).toEqual(['B', 'Z'])
-      // One level only: nothing leading into Z
-      expect(before('Z')).toEqual([])
-      expect(byContent('A')).toBeUndefined()
+      const graph = await getStoryMap(trx, await resolved(trx, c))
+      // Z also leads into C, but nothing on the story leads to Z
+      expect(view(graph).before('C')).toEqual(['B'])
+      expect(view(graph).byContent('Z')).toBeUndefined()
     }),
   )
 })

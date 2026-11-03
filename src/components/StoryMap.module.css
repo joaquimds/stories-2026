@@ -88,12 +88,6 @@
   stroke: var(--color-green);
 }
 
-/* The earliest fragment shown, when the map starts after the beginning */
-.dot-earliest {
-  fill: var(--color-blue);
-  stroke: var(--color-blue);
-}
-
 /* A tale's end: outlined off the story, filled on it */
 .dot-end {
   stroke: var(--color-red);

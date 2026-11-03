@@ -206,9 +206,7 @@ test('maps the branches around a story', async ({ page }) => {
   ).toHaveCount(2)
 })
 
-test('loads what leads into the earliest sentence on a map', async ({
-  page,
-}) => {
+test('shows the whole story on a freshly loaded map', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   // Along the bridge, over the crossing, and on past the clearing
   await page.goto('/map/The_Bridge')
@@ -216,17 +214,10 @@ test('loads what leads into the earliest sentence on a map', async ({
   await map.getByRole('link', { name: /At the clearing/ }).click()
   await map.getByRole('link', { name: /Neither of them/ }).click()
   await expect(page).toHaveURL(/\/map\/\d+\.\d+-\d+$/)
-  // Fresh, the map starts after the beginning
+  // Fresh, the map still reaches back to the beginning
   await page.reload()
-  const beginning = map.getByRole('link', { name: '(the beginning)' })
-  await expect(beginning).toHaveCount(0)
-  // Clicking the earliest moves there, like any dot, and loads what leads
-  // into it, losing nothing already on the map
-  const url = page.url()
-  await map.getByRole('link', { name: /She took the left path/ }).click()
-  await expect(beginning).toHaveCount(1)
-  await expect(page).not.toHaveURL(url)
-  await expect(map.getByRole('link', { name: /Neither of them/ })).toHaveCount(
+  await expect(map.getByRole('link', { name: '(the beginning)' })).toHaveCount(
     1,
   )
+  await expect(map.getByRole('link', { name: /In the garden/ })).toHaveCount(1)
 })

@@ -8,22 +8,19 @@ import { encodeThread, permalink } from './thread.ts'
 // it; longer walks are written out here. A sentence with no walk is left
 // out, for its own story.
 //
-// `first` is the earliest point on the story the map has loaded, and
-// `steps` the addresses of the current sentence's continuations.
+// `steps` are the addresses of the current sentence's continuations.
 export const walkTargets = ({
   links,
   defaultParent,
   path,
   prefixes,
   steps,
-  first,
 }: {
   links: Iterable<{ from: number; to: number }>
   defaultParent: (sentenceId: number) => number | null
   path: number[]
   prefixes: string[]
   steps: Record<number, string>
-  first: number
 }) => {
   const after = new Map<number, number[]>()
   for (const { from, to } of links) {
@@ -34,7 +31,7 @@ export const walkTargets = ({
   // then on along `route`
   const best = new Map<number, { cost: number; at: number; route: number[] }>()
   // Nearest points first, so that a tie keeps the walk with fewer steps back
-  for (let at = end; at >= first; at--) {
+  for (let at = end; at >= 0; at--) {
     const back = end - at
     const start = present(path[at])
     const routes = new Map<number, number[]>([[start, []]])

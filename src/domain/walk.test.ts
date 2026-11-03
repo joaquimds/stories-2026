@@ -27,7 +27,6 @@ const story = {
   path: [0, 1, 2, 3],
   prefixes: ['/', '/s/1', '/s/2', '/s/Title'],
   steps: { 4: '/s/4', 1: '/s/1.1-3' },
-  first: 0,
 }
 
 describe('walkTargets', () => {

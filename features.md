@@ -32,11 +32,11 @@ decided against.
   arrives (one line with an arrowhead at each end when two sentences link
   each other), so loops show as lines leading back to a dot
   already there. Moving around it is walking, and it is built from the
-  story page's own data: each move loads the story and the address of each
-  point on it (`getStory`), the step forward (`getChildren`, so ranking and
-  addresses, titles included, are the story page's), and what leads into
-  where you are (the story's previous sentence first, then by when they
-  were linked). Clicking a dot (or a second tap; Enter from the keyboard)
+  story page's own data: each move loads the whole story, from the
+  beginning, with the address of each point on it (`getStory`), and the step
+  forward (`getChildren`, so ranking and addresses, titles included, are the
+  story page's). Nothing leading in is loaded, so everything on the map can
+  be walked to from somewhere on the story. Clicking a dot (or a second tap; Enter from the keyboard)
   moves there, adding to the map without rebuilding it, and the camera
   glides there. A dot leads by the shortest walk over the links shown,
   where a step back along the story counts the same as a step forward and
@@ -44,10 +44,10 @@ decided against.
   beats going back, and one step back beats going round a loop. Walks back
   to a point on the story, or one step on, use the story page's addresses;
   longer ones are written in the browser with the same `encodeThread`, from
-  what each fragment was written after. A dot with no walk opens the story
-  it was written in. A popover's text opens the same story its dot does. The earliest of the story's sentences
-  shown is blue until the map reaches the beginning (the root, green).
-  Endings are red, outlined off the story. Pointing at a dot (or a first
+  what each fragment was written after. A dot with no walk (only possible if a
+  thread can't be written) opens the story it was written in. A popover's
+  text opens the same story its dot does. The beginning (the root) is green
+  and endings are red, outlined off the story. Pointing at a dot (or a first
   tap, or focus) shows its sentence in a popover.
   "+N" counts continuations not loaded yet. Laid out live by d3-force:
   springs along links, dots pushed apart, a gentle pull to the middle;

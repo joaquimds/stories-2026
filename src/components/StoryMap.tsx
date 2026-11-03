@@ -373,20 +373,15 @@ export const StoryMap = ({
     setGraph((g) => merge(g, loaded))
   }
 
+  // The whole story is always loaded, from the beginning
   const { path } = story
-  // The story is drawn from the earliest of its sentences loaded so far
-  let first = path.length - 1
-  while (first > 0 && graph.fragments.has(present(path[first - 1]))) {
-    first--
-  }
-  const earliest = present(path[first])
   const current = last(path)
-  const onStory = new Set(path.slice(first))
+  const onStory = new Set(path)
   const storyLinks = new Set(
-    path.slice(first + 1).map((id, i) => linkKey(present(path[first + i]), id)),
+    path.slice(1).map((id, i) => linkKey(present(path[i]), id)),
   )
 
-  const positions = useForceLayout(graph, earliest)
+  const positions = useForceLayout(graph, present(path[0]))
   const shownAfter = useMemo(() => {
     const counts = new Map<number, number>()
     for (const { from } of graph.links.values()) {
@@ -405,9 +400,8 @@ export const StoryMap = ({
         path,
         prefixes,
         steps: loaded.steps,
-        first,
       }),
-    [graph, path, prefixes, pathDefaults, loaded.steps, first],
+    [graph, path, prefixes, pathDefaults, loaded.steps],
   )
   const target = (fragment: MapFragment) =>
     targets.get(fragment.id) ?? fragment.origin
@@ -531,13 +525,8 @@ export const StoryMap = ({
     [
       styles.dot,
       onStory.has(fragment.id) ? styles['dot-story'] : '',
-      // The beginning green; the earliest of the story shown blue, marking
-      // where the map starts, when that is later than the beginning
-      fragment.id === ROOT_ID
-        ? styles['dot-start']
-        : fragment.id === earliest
-          ? styles['dot-earliest']
-          : '',
+      // The beginning green
+      fragment.id === ROOT_ID ? styles['dot-start'] : '',
       // Tales' ends red
       fragment.continuations === 0 ? styles['dot-end'] : '',
     ].join(' ')
