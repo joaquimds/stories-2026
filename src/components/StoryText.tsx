@@ -351,7 +351,9 @@ const ForkMark = ({
           ))}
           {fork.count > fork.options.length ? (
             <li>
-              <Link to={fork.allPermalink}>(all {fork.count})</Link>
+              <span className="aside">
+                (<Link to={fork.allPermalink}>all {fork.count}</Link>)
+              </span>
             </li>
           ) : null}
         </ul>

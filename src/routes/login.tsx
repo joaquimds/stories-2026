@@ -146,21 +146,29 @@ function Login() {
         {error ? (
           <small className={`error ${styles.error}`}>{error}</small>
         ) : null}
-        <button
-          type="button"
-          className={`link ${styles.toggle}`}
-          onClick={() => changeMode(oppositeMode)}
-        >
-          {oppositeMode}
-        </button>
-        {mode !== MODES.forgotPassword ? (
+        <span className={`aside ${styles.toggle}`}>
+          (
           <button
             type="button"
-            className={`link ${styles['forgot-password']}`}
-            onClick={() => changeMode(MODES.forgotPassword)}
+            className="link"
+            onClick={() => changeMode(oppositeMode)}
           >
-            Forgot password
+            {oppositeMode.toLowerCase()}
           </button>
+          )
+        </span>
+        {mode !== MODES.forgotPassword ? (
+          <span className={`aside ${styles['forgot-password']}`}>
+            (
+            <button
+              type="button"
+              className="link"
+              onClick={() => changeMode(MODES.forgotPassword)}
+            >
+              forgot password
+            </button>
+            )
+          </span>
         ) : null}
       </form>
     </div>

@@ -5,7 +5,7 @@ test('registers, logs out and logs back in', async ({ page }) => {
   const name = unique('Writer').replace(' ', '')
   const email = `${name.toLowerCase()}@example.com`
   await page.goto('/login')
-  await page.getByRole('button', { name: 'Register' }).click()
+  await page.getByRole('button', { name: 'register', exact: true }).click()
   await page.getByLabel('Pen name').fill(name)
   await page.getByLabel('Email address').fill(email)
   await page.getByLabel('Password').fill('a good password')
@@ -31,7 +31,9 @@ test('rejects bad credentials', async ({ page }) => {
 
 test('resets a forgotten password', async ({ page }) => {
   await page.goto('/login')
-  await page.getByRole('button', { name: 'Forgot password' }).click()
+  await page
+    .getByRole('button', { name: 'forgot password', exact: true })
+    .click()
   await page.getByLabel('Email address').fill('cat@example.com')
   await page.getByRole('button', { name: 'Submit' }).click()
   await expect(page.getByText('Please check your email')).toBeVisible()

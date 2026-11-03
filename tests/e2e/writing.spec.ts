@@ -145,14 +145,14 @@ test('browses relatives in the link panel', async ({ page }) => {
       name: '→ The letter arrived a hundred years late.',
     }),
   ).toBeVisible()
-  await page.getByRole('link', { name: 'check ahead ↓' }).first().click()
+  await page.getByRole('link', { name: 'ahead', exact: true }).first().click()
   await expect(page).toHaveURL(/l\.dir=children/)
   await expect(
     page.getByRole('button', {
       name: '→ She took the left path, towards the river.',
     }),
   ).toBeVisible()
-  await page.getByRole('link', { name: 'trace back ↑' }).first().click()
+  await page.getByRole('link', { name: 'back', exact: true }).first().click()
   await expect(page).toHaveURL(/l\.dir=parents/)
   await expect(
     page.getByRole('button', { name: '→ In the garden, the paths forked.' }),

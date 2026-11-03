@@ -16,24 +16,32 @@ export const Pager = ({ page, toSearch }: Props) => {
   return (
     <div className={styles.pager}>
       {before ? (
-        <Link
-          to="."
-          search={(prev: object) => ({ ...prev, ...toSearch(before) })}
-          rel="prev"
-        >
-          (previous)
-        </Link>
+        <span className="aside">
+          (
+          <Link
+            to="."
+            search={(prev: object) => ({ ...prev, ...toSearch(before) })}
+            rel="prev"
+          >
+            previous
+          </Link>
+          )
+        </span>
       ) : (
         <span />
       )}
       {after ? (
-        <Link
-          to="."
-          search={(prev: object) => ({ ...prev, ...toSearch(after) })}
-          rel="next"
-        >
-          (next)
-        </Link>
+        <span className="aside">
+          (
+          <Link
+            to="."
+            search={(prev: object) => ({ ...prev, ...toSearch(after) })}
+            rel="next"
+          >
+            next
+          </Link>
+          )
+        </span>
       ) : (
         <span />
       )}

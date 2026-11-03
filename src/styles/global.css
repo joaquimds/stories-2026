@@ -106,8 +106,16 @@ a {
 
 /* The narrator's parenthetical asides: links inside them are underlined so
    they stand out from the aside's text */
-.aside a {
+.aside a,
+.aside .link {
   text-decoration: underline;
+}
+
+/* A link-style button in an aside takes the aside's colour */
+.aside .link {
+  color: inherit;
+  font-size: inherit;
+  padding: 0;
 }
 
 /* A tab at the foot of the book, over the fold between its pages, linking

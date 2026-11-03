@@ -163,9 +163,13 @@ const LinkBrowser = ({ search, page, busy, onLink }: BrowserProps) => {
           <ul>
             {page.items.map((r) => (
               <li key={r.id} className={styles['link-actions']}>
-                <Relative id={r.id} direction="parents" enabled={r.hasParent}>
-                  trace back ↑
-                </Relative>
+                <span className={`aside ${styles.relative}`}>
+                  (trace{' '}
+                  <Relative id={r.id} direction="parents" enabled={r.hasParent}>
+                    back
+                  </Relative>
+                  )
+                </span>
                 <button
                   className={`link ${styles.link}`}
                   type="button"
@@ -174,9 +178,13 @@ const LinkBrowser = ({ search, page, busy, onLink }: BrowserProps) => {
                 >
                   → {r.content}
                 </button>
-                <Relative id={r.id} direction="children" enabled={r.hasChild}>
-                  check ahead ↓
-                </Relative>
+                <span className={`aside ${styles.relative}`}>
+                  (check{' '}
+                  <Relative id={r.id} direction="children" enabled={r.hasChild}>
+                    ahead
+                  </Relative>
+                  )
+                </span>
               </li>
             ))}
           </ul>
@@ -213,13 +221,13 @@ const Relative = ({ id, direction, enabled, children }: RelativeProps) =>
         'l.dir': direction,
         'l.from': id,
       })}
-      className={`link ${styles.relative}`}
+      className="link"
       replace
     >
       {children}
     </Link>
   ) : (
-    <button type="button" className={`link ${styles.relative}`} disabled>
+    <button type="button" className="link" disabled>
       {children}
     </button>
   )

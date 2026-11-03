@@ -63,7 +63,7 @@ function Stats() {
               {stats.longestStory.length} fragments
             </Link>
           ) : (
-            '–'
+            '(none yet)'
           )}
         </dd>
         <dt>The most-branched fragment</dt>
@@ -76,7 +76,7 @@ function Stats() {
               ({stats.mostBranched.children} continuations)
             </>
           ) : (
-            '–'
+            '(none yet)'
           )}
         </dd>
         <dt>The most favourited story</dt>
@@ -84,12 +84,12 @@ function Stats() {
           {stats.mostLiked ? (
             <>
               <Link to={stats.mostLiked.permalink}>
-                {stats.mostLiked.title ?? 'Untitled'}
+                {stats.mostLiked.title ?? '(untitled)'}
               </Link>{' '}
               ({stats.mostLiked.likes} favourites)
             </>
           ) : (
-            '–'
+            '(none yet)'
           )}
         </dd>
         <dt>Loops in the tree</dt>

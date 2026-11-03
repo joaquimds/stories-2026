@@ -776,16 +776,20 @@ export const StoryMap = ({
         >
           −
         </button>
-        <button
-          type="button"
-          className="link"
-          onClick={() => {
-            cancelAnimationFrame(glide.current)
-            setChosen(null)
-          }}
-        >
-          reset
-        </button>
+        <span className="aside">
+          (
+          <button
+            type="button"
+            className="link"
+            onClick={() => {
+              cancelAnimationFrame(glide.current)
+              setChosen(null)
+            }}
+          >
+            reset
+          </button>
+          )
+        </span>
       </div>
       <svg
         ref={svg}
@@ -1085,14 +1089,18 @@ export const StoryMap = ({
           ) : null}
           {mode === 'aim' && linkable(popover.fragment.id) ? (
             <div className={styles.actions}>
-              <button
-                type="button"
-                className={`link ${styles.go}`}
-                disabled={writing.busy}
-                onClick={() => linkTo(popover.fragment.id)}
-              >
-                (link here)
-              </button>
+              <span className={`aside ${styles.go}`}>
+                (
+                <button
+                  type="button"
+                  className="link"
+                  disabled={writing.busy}
+                  onClick={() => linkTo(popover.fragment.id)}
+                >
+                  link here
+                </button>
+                )
+              </span>
             </div>
           ) : null}
           {popover.fragment.id === current &&

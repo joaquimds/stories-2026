@@ -93,12 +93,6 @@ decided against.
 - **Credit in the digest**: writers also hear when someone else favourites or
   titles a story that passes through their sentences.
 
-## To do
-
-- **Review the copy for the narrator's voice**: go through all the site's
-  text and put anything that can be in the narrator's parenthetical style
-  (quiet asides, gentle links and small notes, as in CLAUDE.md) into it.
-
 ## Not yet
 
 - **Moderation tools.** Reports are emailed and stored, but there's no way to

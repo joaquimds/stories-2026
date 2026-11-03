@@ -49,7 +49,7 @@ export const Route = createRootRoute({
     }
   },
   component: RootComponent,
-  notFoundComponent: () => <Message>Not found</Message>,
+  notFoundComponent: () => <Message>not found</Message>,
   errorComponent: ErrorScreen,
 })
 
@@ -126,15 +126,14 @@ function ErrorScreen({ error }: ErrorComponentProps) {
       window.location.reload()
     }
   }, [error])
-  return reload ? null : <Message>Something went wrong</Message>
+  return reload ? null : <Message>something went wrong</Message>
 }
 
+// What stands in for a page that can't be shown, in the narrator's voice
 function Message({ children }: { children: ReactNode }) {
   return (
-    <p style={{ margin: 'auto', textAlign: 'center' }}>
-      {children}
-      <br />
-      <Link to="/">(back to the beginning)</Link>
+    <p className="aside" style={{ margin: 'auto', textAlign: 'center' }}>
+      ({children}; back to the <Link to="/">beginning</Link>)
     </p>
   )
 }
