@@ -57,7 +57,7 @@ decided against.
   always, on screens without hover), which turns to face the pointer.
   Clicking it (or Enter) brings out a dashed arrow: landing it on a dot
   links to it (what can't be linked fades: the beginning, what already
-  follows, everything when logged out; a touch shows "(link here)", in green, first),
+  follows, everything when logged out; a touch shows "link here", in green, first),
   and landing it in empty space opens a card to write in there, closed by
   its × or Escape with the draft kept; the new dot starts where the arrow
   landed. Escape or a right click puts the arrow away, and a drag still

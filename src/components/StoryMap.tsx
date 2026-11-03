@@ -1089,18 +1089,14 @@ export const StoryMap = ({
           ) : null}
           {mode === 'aim' && linkable(popover.fragment.id) ? (
             <div className={styles.actions}>
-              <span className={`aside ${styles.go}`}>
-                (
-                <button
-                  type="button"
-                  className="link"
-                  disabled={writing.busy}
-                  onClick={() => linkTo(popover.fragment.id)}
-                >
-                  link here
-                </button>
-                )
-              </span>
+              <button
+                type="button"
+                className={`link ${styles.go}`}
+                disabled={writing.busy}
+                onClick={() => linkTo(popover.fragment.id)}
+              >
+                link here
+              </button>
             </div>
           ) : null}
           {popover.fragment.id === current &&
