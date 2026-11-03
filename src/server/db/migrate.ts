@@ -1,10 +1,12 @@
 import { type Migration, Migrator } from 'kysely/migration'
 import type { Db } from './index.ts'
 import * as m0001 from './migrations/0001_init.ts'
+import * as m0002 from './migrations/0002_foreign_key_indexes.ts'
 
 // Listed statically so migrations are bundled with the server build
 const migrations: Record<string, Migration> = {
   '0001_init': m0001,
+  '0002_foreign_key_indexes': m0002,
 }
 
 export const migrate = async (db: Db) => {
