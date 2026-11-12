@@ -163,13 +163,9 @@ const LinkBrowser = ({ search, page, busy, onLink }: BrowserProps) => {
           <ul>
             {page.items.map((r) => (
               <li key={r.id} className={styles['link-actions']}>
-                <span className={`aside ${styles.relative}`}>
-                  (trace{' '}
-                  <Relative id={r.id} direction="parents" enabled={r.hasParent}>
-                    back
-                  </Relative>
-                  )
-                </span>
+                <Relative id={r.id} direction="parents" enabled={r.hasParent}>
+                  trace back
+                </Relative>
                 <button
                   className={`link ${styles.link}`}
                   type="button"
@@ -178,13 +174,9 @@ const LinkBrowser = ({ search, page, busy, onLink }: BrowserProps) => {
                 >
                   → {r.content}
                 </button>
-                <span className={`aside ${styles.relative}`}>
-                  (check{' '}
-                  <Relative id={r.id} direction="children" enabled={r.hasChild}>
-                    ahead
-                  </Relative>
-                  )
-                </span>
+                <Relative id={r.id} direction="children" enabled={r.hasChild}>
+                  check ahead
+                </Relative>
               </li>
             ))}
           </ul>
@@ -210,24 +202,27 @@ type RelativeProps = {
   children: React.ReactNode
 }
 
-// Moves the browser to the sentences around a result
+// Moves the browser to the sentences around a result, in the narrator's
+// voice; greyed out when there is nothing that way
 const Relative = ({ id, direction, enabled, children }: RelativeProps) =>
   enabled ? (
-    <Link
-      to="."
-      search={(prev: object) => ({
-        ...prev,
-        ...LINK_RESET,
-        'l.dir': direction,
-        'l.from': id,
-      })}
-      className="link"
-      replace
-    >
-      {children}
-    </Link>
+    <span className={`aside ${styles.relative}`}>
+      (
+      <Link
+        to="."
+        search={(prev: object) => ({
+          ...prev,
+          ...LINK_RESET,
+          'l.dir': direction,
+          'l.from': id,
+        })}
+        className="link"
+        replace
+      >
+        {children}
+      </Link>
+      )
+    </span>
   ) : (
-    <button type="button" className="link" disabled>
-      {children}
-    </button>
+    <span className={`aside ${styles['relative-none']}`}>({children})</span>
   )

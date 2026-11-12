@@ -80,6 +80,11 @@
   color: var(--color-blue);
 }
 
+/* Nowhere to go that way */
+.relative-none {
+  color: var(--color-grey-medium);
+}
+
 .link {
   color: var(--color-green);
   margin: var(--spacing-0) 0;
