@@ -62,7 +62,8 @@ const CONTENT: { question: string; answer: ReactNode }[] = [
         (or tap) points to read the associated fragments, and click them (or tap
         again) to move there. Paths that loop lead back to a point already on
         the map, and {'"+"'} with a number is displayed if there are more hidden
-        paths to explore here. The beginning is green and endings are red.
+        paths to explore here. The beginning is green and endings are red. Drag
+        the map to look around, or drag a point to move it.
       </p>
     ),
   },

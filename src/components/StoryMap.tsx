@@ -214,7 +214,8 @@ const placeNew = (graph: Graph, placed: Map<number, Point>, anchor: number) => {
 // lead to by springs, pushed apart from each other, kept from overlapping,
 // and drawn gently towards the middle. New sentences start next to their
 // neighbours; those already placed stay where they are, so the map grows
-// rather than changing shape.
+// rather than changing shape. A dot you drag is held where you leave it,
+// and the rest settle around it.
 const useForceLayout = (
   graph: Graph,
   anchor: number,
@@ -229,9 +230,16 @@ const useForceLayout = (
   useEffect(() => {
     latest.current = { graph, anchor, positions }
   })
+  // Dots that have been dragged, held where they were left
+  const pinned = useRef(new Map<number, Point>())
+  // Moves a dragged dot; null once it is let go
+  const mover = useRef<(id: number, at: Point | null) => void>(() => {})
   useEffect(() => {
     const { graph, anchor, positions: placed } = latest.current
     const seeded = new Map(placed)
+    for (const [id, at] of pinned.current) {
+      seeded.set(id, at)
+    }
     for (const [id, at] of hints.current) {
       if (!placed.has(id) && graph.fragments.has(id)) {
         seeded.set(id, at)
@@ -239,10 +247,14 @@ const useForceLayout = (
     }
     const start = placeNew(graph, seeded, anchor)
     const settled = [...graph.fragments.keys()].every((id) => placed.has(id))
-    const bodies: Body[] = [...graph.fragments.keys()].map((id) => ({
-      id,
-      ...(start.get(id) ?? { x: 0, y: 0 }),
-    }))
+    const bodies: Body[] = [...graph.fragments.keys()].map((id) => {
+      const held = pinned.current.get(id)
+      return {
+        id,
+        ...(start.get(id) ?? { x: 0, y: 0 }),
+        ...(held ? { fx: held.x, fy: held.y } : {}),
+      }
+    })
     const links = [...graph.links.values()]
       .filter((l) => l.from !== l.to)
       .map((l) => ({ source: l.from, target: l.to }))
@@ -274,11 +286,34 @@ const useForceLayout = (
     } else {
       simulation.on('tick', publish)
     }
+    const byId = new Map(bodies.map((b) => [b.id, b]))
+    mover.current = (id, at) => {
+      const body = byId.get(id)
+      if (!body) {
+        return
+      }
+      if (at) {
+        pinned.current.set(id, at)
+        body.fx = body.x = at.x
+        body.fy = body.y = at.y
+        if (reduceMotion) {
+          publish()
+        } else {
+          simulation.alphaTarget(0.3).restart()
+        }
+      } else if (reduceMotion) {
+        simulation.tick(100)
+        publish()
+      } else {
+        simulation.alphaTarget(0)
+      }
+    }
     return () => {
       simulation.stop()
     }
   }, [graph, hints])
-  return positions
+  const move = (id: number, at: Point | null) => mover.current(id, at)
+  return { positions, move }
 }
 
 // An arrowhead with its tip at `tip`, pointing along `direction`
@@ -345,7 +380,8 @@ const sentence = (fragment: MapFragment) =>
 // The graph around a story, which grows as you explore: a dot moves the map
 // to its sentence and adds what lies beyond it and what leads into it, and
 // nothing already placed moves far.
-// Panned by dragging and zoomed with the wheel or the buttons.
+// Panned by dragging, zoomed with the wheel or the buttons; dragging a dot
+// moves it.
 export const StoryMap = ({
   graph: loaded,
   story,
@@ -385,7 +421,7 @@ export const StoryMap = ({
   )
 
   const hints = useRef(new Map<number, Point>())
-  const positions = useForceLayout(graph, present(path[0]), hints)
+  const { positions, move } = useForceLayout(graph, present(path[0]), hints)
   const shownAfter = useMemo(() => {
     const counts = new Map<number, number>()
     for (const { from } of graph.links.values()) {
@@ -540,12 +576,16 @@ export const StoryMap = ({
   useEffect(() => {
     latest.current = { camera, positions }
   })
+  // A drag pans the map, or moves the dot it started on
   const drag = useRef<{
     x: number
     y: number
     camera: Camera
     moved: boolean
+    dot: { id: number; from: Point } | null
   }>(null)
+  // The dot a press started on, picked up by the map's own handler
+  const pressed = useRef<number | null>(null)
 
   // Glides to where you are when you move along the map
   const glide = useRef(0)
@@ -807,11 +847,15 @@ export const StoryMap = ({
             setHovered(null)
           }
           cancelAnimationFrame(glide.current)
+          const dot = pressed.current
+          pressed.current = null
+          const from = dot === null ? undefined : positions.get(dot)
           drag.current = {
             x: event.clientX,
             y: event.clientY,
             camera,
             moved: false,
+            dot: dot !== null && from ? { id: dot, from } : null,
           }
         }}
         onPointerMove={(event) => {
@@ -841,6 +885,18 @@ export const StoryMap = ({
           if (!start.moved) {
             start.moved = true
             event.currentTarget.setPointerCapture(event.pointerId)
+            if (start.dot) {
+              // Holds the view still while a dot moves
+              setChosen(start.camera)
+              setHovered(null)
+            }
+          }
+          if (start.dot) {
+            move(start.dot.id, {
+              x: start.dot.from.x + dx / start.camera.scale,
+              y: start.dot.from.y + dy / start.camera.scale,
+            })
+            return
           }
           setChosen({
             ...start.camera,
@@ -849,6 +905,10 @@ export const StoryMap = ({
           })
         }}
         onPointerUp={() => {
+          const dot = drag.current?.moved ? drag.current.dot : null
+          if (dot) {
+            move(dot.id, null)
+          }
           // Leaves `moved` set until the click that ends a drag is ignored
           setTimeout(() => {
             drag.current = null
@@ -965,6 +1025,7 @@ export const StoryMap = ({
               onPointerDown={(event) => {
                 pointerType.current = event.pointerType
                 pressing.current = true
+                pressed.current = id
               }}
               onFocus={() => {
                 // Keyboard focus shows the sentence; a tap's focus waits

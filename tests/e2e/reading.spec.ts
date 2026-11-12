@@ -221,3 +221,30 @@ test('shows the whole story on a freshly loaded map', async ({ page }) => {
   )
   await expect(map.getByRole('link', { name: /In the garden/ })).toHaveCount(1)
 })
+
+test('moves a dot by dragging it', async ({ page }) => {
+  await page.goto('/map/The_Bridge')
+  const map = page.getByRole('img', { name: "Map of the story's branches" })
+  const dot = map.getByRole('link', { name: /She took the left path/ })
+  // Waits for the layout to come to rest
+  await expect(async () => {
+    const a = await dot.boundingBox()
+    await page.waitForTimeout(300)
+    expect(await dot.boundingBox()).toEqual(a)
+  }).toPass()
+  const from = await dot.boundingBox()
+  if (!from) {
+    throw new Error('No dot')
+  }
+  const x = from.x + from.width / 2
+  const y = from.y + from.height / 2
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x + 40, y + 60, { steps: 8 })
+  await page.mouse.up()
+  // It stays where it was left, and the drag doesn't move along the map
+  await expect(page).toHaveURL('/map/The_Bridge')
+  const to = await dot.boundingBox()
+  expect(to?.x).toBeCloseTo(from.x + 40, -1)
+  expect(to?.y).toBeCloseTo(from.y + 60, -1)
+})

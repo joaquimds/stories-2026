@@ -82,7 +82,7 @@
 
 /* Nowhere to go that way */
 .relative-none {
-  color: var(--color-grey-medium);
+  color: var(--color-grey-dark);
 }
 
 .link {

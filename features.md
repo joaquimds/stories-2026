@@ -71,7 +71,8 @@ decided against.
   "+N" counts continuations not loaded yet. Laid out live by d3-force:
   springs along links, dots pushed apart, a gentle pull to the middle;
   new dots start beside their neighbours and placed ones stay put. Drag to
-  pan, scroll or buttons to zoom. How to read it is in the FAQ rather than
+  pan, scroll or buttons to zoom; dragging a dot moves it, held where it's
+  left (for the visit) while the rest settle round it. How to read it is in the FAQ rather than
   on the page.
 - **Share images** (`/og/<story>`): each story's link preview shows its title
   and opening in EB Garamond. The SVG is laid out by hand, wrapping text
