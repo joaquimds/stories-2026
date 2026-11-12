@@ -244,8 +244,10 @@ input,
 
 /* Replaces nprogress */
 
+/* Grows quickly, then creeps towards the end and waits there, so a long
+   load never looks like it has started over */
 .pending-bar {
-  animation: pending 1.5s ease-out infinite;
+  animation: pending 20s ease-out forwards;
   background: var(--color-black);
   height: 2px;
   left: 0;
@@ -257,11 +259,17 @@ input,
 }
 
 @keyframes pending {
-  from {
+  0% {
     transform: scaleX(0);
   }
-  to {
-    transform: scaleX(0.9);
+  5% {
+    transform: scaleX(0.6);
+  }
+  20% {
+    transform: scaleX(0.8);
+  }
+  100% {
+    transform: scaleX(0.95);
   }
 }
 
