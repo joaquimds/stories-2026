@@ -8,7 +8,7 @@ decided against.
 ### Finding stories
 
 - **Navbar menu**: below 600px the navbar's links fold into a menu button
-  that drops them down below the bar; choosing a link, Escape, or a tap
+  that drops them down in a row below the bar; choosing a link, Escape, or a tap
   elsewhere closes it.
 - **Recent** (`/recent`, in the navbar): the newest sentences anywhere on the
   site, each with the sentence it follows, its author and date. **Loose

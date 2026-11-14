@@ -44,12 +44,14 @@
   }
 }
 
-/* Narrow: a panel below the bar, shown while the menu is open */
+/* Narrow: a row below the bar, shown while the menu is open */
 .links {
   background: var(--color-white);
   border-bottom: 1px solid var(--color-grey-light);
   display: none;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 0 var(--spacing-2);
+  justify-content: flex-end;
   left: 0;
   padding: 0 var(--spacing-1) var(--spacing-1);
   position: absolute;
@@ -61,26 +63,16 @@
     display: flex;
   }
 
-  a {
-    padding: var(--spacing-0) 0;
-    text-align: right;
-  }
-
+  /* Wide: the same row, in the bar itself */
   @media (min-width: 600px) {
-    background: none;
-    border: none;
-    display: block;
-    margin-left: auto;
-    padding: 0;
-    position: static;
-
-    a {
-      margin-right: var(--spacing-2);
+    &,
+    &.open {
+      background: none;
+      border: none;
+      display: flex;
+      margin-left: auto;
       padding: 0;
-    }
-
-    :last-child {
-      margin-right: 0;
+      position: static;
     }
   }
 }
