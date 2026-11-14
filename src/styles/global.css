@@ -60,7 +60,10 @@ ul {
 .root {
   display: flex;
   flex-direction: column;
+  /* The visible height on phones, whose address bar comes and goes; 100vh
+     is the height with it hidden, so the footer started off-screen */
   height: 100vh;
+  height: 100dvh;
 
   /* Pages that scroll as a whole rather than within their content */
   &.scroll main {

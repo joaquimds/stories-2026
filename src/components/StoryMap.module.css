@@ -5,6 +5,7 @@
   flex-direction: column;
   flex-grow: 1;
   min-height: 60vh;
+  min-height: 60dvh;
   position: relative;
 }
 
