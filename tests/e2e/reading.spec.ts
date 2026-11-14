@@ -254,3 +254,17 @@ test('moves a dot by dragging it', async ({ page }) => {
   expect(after?.x).toBeCloseTo(still.x, -1)
   expect(after?.y).toBeCloseTo(still.y, -1)
 })
+
+test('folds the navbar into a menu on narrow screens', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 })
+  await page.goto('/')
+  const library = page.getByRole('link', { name: 'Library', exact: true })
+  await expect(library).toBeHidden()
+  const menu = page.getByRole('button', { name: 'Menu' })
+  await menu.click()
+  await library.click()
+  await expect(page).toHaveURL('/library')
+  // Choosing a link closes the menu
+  await expect(menu).toHaveAttribute('aria-expanded', 'false')
+  await expect(library).toBeHidden()
+})
